@@ -1,7 +1,3 @@
-# F1 Calendar Widget
-
-F1 2026 race calendar widget for iOS — upcoming races, countdowns, and session times in your local timezone.
-
 <p align="center">
   <img src="assets/ui-screenshot.png" alt="F1 Calendar Widget Preview" width="700"/>
 </p>
