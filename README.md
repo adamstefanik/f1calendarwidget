@@ -8,7 +8,7 @@ F1 2026 race calendar widget for Apple gadgets – upcoming races, countdowns, a
 
 ## Features
 
-- **3 widget sizes** — small, medium, and large to fit your Home Screen
+- **2 widget sizes** — medium and large to fit your Home Screen
 - **Live countdown** — days, hours, and minutes until the next race
 - **Full session schedule** — FP1, FP2, FP3, Qualifying, Sprint, and Grand Prix
 - **Sprint weekend support** — automatically detects and adjusts for sprint formats
