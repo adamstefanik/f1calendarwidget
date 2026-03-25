@@ -5,8 +5,7 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            Text("Race Detail")
-                .foregroundColor(.f1Text)
+            RaceDetailView(race: F1Calendar.nextRace ?? F1Calendar.fallbackRaces[0])
                 .tabItem {
                     Image(systemName: "car.fill")
                     Text("Race")
