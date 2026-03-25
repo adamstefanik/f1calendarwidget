@@ -35,7 +35,7 @@ struct CircuitInfoView: View {
                     .stroke(Color.f1Border, lineWidth: 1)
             )
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 14)
     }
 }
 

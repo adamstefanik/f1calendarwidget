@@ -11,20 +11,20 @@ struct AppSessionRowView: View {
     var body: some View {
         HStack(spacing: 0) {
             Text(session.name)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(.f1Text)
-                .frame(width: 130, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             if isCompleted {
                 Text("COMPLETED")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundColor(.f1SecondaryText)
-                    .frame(maxWidth: .infinity)
+                    .frame(width: 72, alignment: .leading)
             } else {
                 Text(session.day)
-                    .font(.system(size: 12, weight: .regular))
+                    .font(.system(size: 10, weight: .regular))
                     .foregroundColor(.f1SecondaryText)
-                    .frame(maxWidth: .infinity)
+                    .frame(width: 95, alignment: .leading)
             }
 
             if session.isLive {
@@ -37,14 +37,14 @@ struct AppSessionRowView: View {
                     .frame(width: 100, alignment: .trailing)
             } else {
                 Text(session.time)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 10, weight: .medium))
                     .foregroundColor(.f1Text)
                     .frame(width: 100, alignment: .trailing)
                     .lineLimit(1)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 34)
+        .padding(.vertical, 10)
         .opacity(isCompleted ? 0.45 : 1.0)
     }
 }

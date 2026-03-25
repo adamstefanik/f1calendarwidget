@@ -1,5 +1,6 @@
 import SwiftUI
 import WidgetKit
+import UIKit
 
 // MARK: - Entry View Router
 
@@ -28,22 +29,16 @@ struct F1LargeView: View {
 
             // HEADER
             HStack(alignment: .center, spacing: 12) {
-                // Date box with border
-                VStack(spacing: 0) {
-                    Text(race.weekendDayRange)
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(.f1Text)
-                    Text(race.monthLabel)
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.f1Text)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color.f1Border, lineWidth: 1)
-                )
-
+                
+                // Track box
+                DynamicTrackView(raceShortName: race.shortName)
+                    .frame(width: 65, height: 65)
+                    .padding(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.f1Border, lineWidth: 1)
+                    )
+                
                 // Race info
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
@@ -58,8 +53,13 @@ struct F1LargeView: View {
                     Text("FORMULA 1 \(race.name.uppercased()) 2026")
                         .font(.system(size: 8, weight: .medium))
                         .foregroundColor(.f1SecondaryText)
-                        .lineLimit(2)
+                        .lineLimit(3)
                         .fixedSize(horizontal: false, vertical: true)
+                    
+                    Text("\(race.weekendDayRange) \(race.monthLabel)")
+                        .font(.system(size: 10, weight: .regular))
+                        .foregroundColor(.f1SecondaryText)
+                        .lineLimit(1)
                 }
 
                 Spacer()
@@ -78,6 +78,7 @@ struct F1LargeView: View {
                                 RoundedRectangle(cornerRadius: 3).stroke(Color.primary, lineWidth: 1)
                             }
                         }
+                        .padding(.top,29)
 
                     HStack(alignment: .bottom, spacing: 6) {
                         CountdownUnit(value: countdownDays,  label: "DAYS")
@@ -86,7 +87,7 @@ struct F1LargeView: View {
                     }
                 }
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 10)
             .padding(.bottom, 20)
 
             // DIVIDER
@@ -135,16 +136,17 @@ struct F1MediumView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
-                VStack(spacing: 0) {
-                    Text(race.weekendDayRange)
-                        .font(.system(size: 13, weight: .bold)).foregroundColor(.f1Text)
-                    Text(race.monthLabel)
-                        .font(.system(size: 15, weight: .bold)).foregroundColor(.f1Text)
-                }
-                .padding(7)
-                .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.f1Border, lineWidth: 1))
-
-                VStack(alignment: .leading, spacing: 2) {
+                
+                // Track box
+                DynamicTrackView(raceShortName: race.shortName)
+                    .frame(width: 45, height: 45)
+                    .padding(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.f1Border, lineWidth: 1)
+                    )
+                
+                VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 4) {
                         if renderingMode == .fullColor {
                             Text(race.countryFlag)
@@ -156,7 +158,13 @@ struct F1MediumView: View {
                     Text("FORMULA 1 \(race.name.uppercased()) 2026")
                         .font(.system(size: 7)).foregroundColor(.f1SecondaryText).lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
+                    
+                    Text("\(race.weekendDayRange) \(race.monthLabel)")
+                        .font(.system(size: 8, weight: .regular))
+                        .foregroundColor(.f1SecondaryText)
+                        .lineLimit(1)
                 }
+                
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 4) {
@@ -171,6 +179,7 @@ struct F1MediumView: View {
                                 RoundedRectangle(cornerRadius: 3).stroke(Color.primary, lineWidth: 1)
                             }
                         }
+                        .padding(.top,14)
 
                     HStack(alignment: .bottom, spacing: 5) {
                         CountdownUnit(value: mediumCountdownDays, label: "DAYS")
@@ -183,7 +192,7 @@ struct F1MediumView: View {
 
             Rectangle().fill(Color.f1Divider).frame(height: 1)
 
-            ForEach(Array(race.sessions.suffix(2).enumerated()), id: \.offset) { _, session in
+            ForEach(Array(race.sessions.prefix(2).enumerated()), id: \.offset) { _, session in
                 SessionRowView(session: session)
             }
 
@@ -268,13 +277,31 @@ struct CountdownUnit: View {
         }
     }
 }
+// MARK: - Dynamic Track View
 
+struct DynamicTrackView: View {
+    let raceShortName: String
+
+    var body: some View {
+        let name = "track\(raceShortName)"
+
+        if let uiImage = UIImage(named: name, in: Bundle.main, compatibleWith: nil) {
+            Image(uiImage: uiImage)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .foregroundColor(.f1Red)
+        } else {
+            TrackPlaceholder().stroke(Color.f1Red, lineWidth: 2)
+        }
+    }
+}
 // MARK: - Previews
 
 #Preview("Large", as: .systemLarge) {
     F1CalendarWidget()
 } timeline: {
-    F1WidgetEntry(date: .now, nextRace: F1Calendar.fallbackRaces.first!)
+    F1WidgetEntry(date: .now, nextRace: F1Calendar.nextRace ?? F1Calendar.fallbackRaces[2])
 }
 
 #Preview("Large – Live FP1", as: .systemLarge) {
@@ -286,7 +313,7 @@ struct CountdownUnit: View {
 #Preview("Medium", as: .systemMedium) {
     F1CalendarWidget()
 } timeline: {
-    F1WidgetEntry(date: .now, nextRace: F1Calendar.fallbackRaces.first!)
+    F1WidgetEntry(date: .now, nextRace: F1Calendar.nextRace ?? F1Calendar.fallbackRaces[2])
 }
 
 #Preview("Medium – Live FP1", as: .systemMedium) {

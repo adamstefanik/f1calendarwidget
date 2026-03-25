@@ -80,11 +80,22 @@
 			);
 			target = CC4C038A2F69A65E0034CA8E /* F1CalendarWidget */;
 		};
+		CC755CCB2F74227800425F60 /* Exceptions for "F1CalendarWidget" folder in "F1WidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Assets.xcassets,
+				Views/TrackShapes/TrackPlaceholder.swift,
+			);
+			target = CC4C03C52F69B0000034CA8E /* F1WidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CC4C038D2F69A65E0034CA8E /* F1CalendarWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CC755CCB2F74227800425F60 /* Exceptions for "F1CalendarWidget" folder in "F1WidgetExtension" target */,
+			);
 			path = F1CalendarWidget;
 			sourceTree = "<group>";
 		};
@@ -691,7 +702,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = f1Background;
 				CODE_SIGN_ENTITLEMENTS = F1WidgetExtension/F1WidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -731,7 +742,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = f1Background;
 				CODE_SIGN_ENTITLEMENTS = F1WidgetExtension/F1WidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

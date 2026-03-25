@@ -4,7 +4,7 @@ struct RaceHeaderView: View {
     let race: Race
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 12) {
+        HStack(alignment: .top, spacing: 12) {
             // Track box
             TrackPlaceholder()
                 .stroke(Color.f1Red, lineWidth: 2)
@@ -17,23 +17,26 @@ struct RaceHeaderView: View {
 
             // Race info
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
+                HStack(spacing: 2) {
                     Text(race.countryFlag)
                         .font(.system(size: 18))
+                        .padding(.top, 20)
                     Text(race.city)
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.f1Text)
+                        .padding(.top, 20)
                 }
-
+                
                 Text("FORMULA 1 \(race.name.uppercased()) 2026")
                     .font(.system(size: 9, weight: .medium))
                     .foregroundColor(.f1SecondaryText)
-                    .lineLimit(2)
-
-                Text("\(race.weekendDayRange) \(race.monthLabel) · \(race.circuit)")
+                    .lineLimit(4)
+                
+                Text("\(race.weekendDayRange) \(race.monthLabel)")
                     .font(.system(size: 10, weight: .regular))
                     .foregroundColor(.f1SecondaryText)
                     .lineLimit(1)
+
             }
 
             Spacer()
@@ -47,6 +50,7 @@ struct RaceHeaderView: View {
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
                     .background(RoundedRectangle(cornerRadius: 3).fill(Color.f1Red))
+                    .padding(.top, 60)
 
                 // Countdown
                 HStack(alignment: .bottom, spacing: 6) {
@@ -56,8 +60,9 @@ struct RaceHeaderView: View {
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.leading, 30)
+        .padding(.trailing, 30)
+        .padding(.top, 30)
     }
 
     // MARK: - Countdown
@@ -89,10 +94,10 @@ private struct CountdownBlock: View {
     var body: some View {
         VStack(spacing: 1) {
             Text(value)
-                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                .font(.system(size: 18, weight: .bold, design: .monospaced))
                 .foregroundColor(.f1Text)
             Text(label)
-                .font(.system(size: 7, weight: .medium))
+                .font(.system(size: 6, weight: .medium))
                 .foregroundColor(.f1SecondaryText)
         }
     }

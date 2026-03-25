@@ -1,0 +1,100 @@
+import SwiftUI
+
+struct RaceResultsView: View {
+    let results: [DriverResult]
+
+    private var podium: [DriverResult] {
+        results.filter { !$0.dnf && $0.position <= 3 }.sorted { $0.position < $1.position }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("RACE RESULT")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.f1SecondaryText)
+
+            // Podium cards
+            ForEach(podium) { driver in
+                PodiumCard(driver: driver)
+            }
+
+            // Full results link
+            NavigationLink {
+                SessionResultsView(title: "Grand Prix Results", results: results)
+            } label: {
+                Text("Tap for full results")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.f1Red)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 4)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 16)
+    }
+}
+
+// MARK: - Podium Card
+
+private struct PodiumCard: View {
+    let driver: DriverResult
+
+    private var positionColor: Color {
+        switch driver.position {
+        case 1: return .f1Gold
+        case 2: return .f1Silver
+        case 3: return .f1Bronze
+        default: return .f1Text
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text("P\(driver.position)")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(positionColor)
+                .frame(width: 40)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(driver.driverName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.f1Text)
+                Text(driver.team)
+                    .font(.system(size: 11))
+                    .foregroundColor(.f1SecondaryText)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(driver.time)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.f1Text)
+                Text("+\(driver.points) pts")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.f1SecondaryText)
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color("f1Surface"))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(positionColor.opacity(0.5), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    NavigationStack {
+        ScrollView {
+            RaceResultsView(results: DriverResult.previewResults)
+        }
+        .background(Color("f1Background"))
+    }
+    .preferredColorScheme(.dark)
+}
