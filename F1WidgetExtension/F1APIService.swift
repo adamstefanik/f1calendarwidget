@@ -28,6 +28,20 @@ struct OpenF1Session: Codable {
     let year: Int
 }
 
+struct OpenF1Position: Codable {
+    let driver_number: Int
+    let position: Int?
+    let date: String?
+}
+
+struct OpenF1Driver: Codable {
+    let driver_number: Int
+    let first_name: String
+    let last_name: String
+    let team_name: String?
+    let name_acronym: String?
+}
+
 // MARK: - API Service
 
 final class F1APIService {
@@ -254,4 +268,105 @@ final class F1APIService {
         "BEL": "BEL", "NLD": "NED", "AZE": "AZE", "SGP": "SGP",
         "MEX": "MEX", "BRA": "BRA", "QAT": "QAT", "ARE": "ABU",
     ]
+
+    // MARK: - Race Results
+
+    private let resultsCacheKey = "F1CachedResults"
+    private let resultsCacheTimestampKey = "F1ResultsCacheTimestamp"
+
+    func fetchResults(for sessionKey: Int) async -> [DriverResult] {
+        // Check cache
+        let cacheKey = "\(resultsCacheKey)_\(sessionKey)"
+        let timestampKey = "\(resultsCacheTimestampKey)_\(sessionKey)"
+
+        if let cached = loadCachedResults(cacheKey: cacheKey),
+           isResultsCacheValid(timestampKey: timestampKey) {
+            return cached
+        }
+
+        // Fetch from OpenF1
+        guard let positionsURL = URL(string: "\(baseURL)/position?session_key=\(sessionKey)&position<=20"),
+              let driversURL = URL(string: "\(baseURL)/drivers?session_key=\(sessionKey)") else {
+            return []
+        }
+
+        do {
+            async let posData = URLSession.shared.data(from: positionsURL)
+            async let drvData = URLSession.shared.data(from: driversURL)
+
+            let (pData, pResp) = try await posData
+            let (dData, dResp) = try await drvData
+
+            guard let pH = pResp as? HTTPURLResponse, pH.statusCode == 200,
+                  let dH = dResp as? HTTPURLResponse, dH.statusCode == 200 else { return [] }
+
+            let positions = try JSONDecoder().decode([OpenF1Position].self, from: pData)
+            let drivers = try JSONDecoder().decode([OpenF1Driver].self, from: dData)
+
+            let driverMap = Dictionary(grouping: drivers, by: \.driver_number)
+
+            // Get final positions (last entry per driver)
+            var finalPositions: [Int: OpenF1Position] = [:]
+            for pos in positions {
+                finalPositions[pos.driver_number] = pos
+            }
+
+            let results: [DriverResult] = finalPositions.values
+                .sorted { ($0.position ?? 99) < ($1.position ?? 99) }
+                .compactMap { pos in
+                    guard let position = pos.position,
+                          let driver = driverMap[pos.driver_number]?.first else { return nil }
+                    let fullName = "\(driver.first_name) \(driver.last_name)"
+                    return DriverResult(
+                        position: position,
+                        driverName: fullName,
+                        team: driver.team_name ?? "Unknown",
+                        time: "",
+                        points: pointsForPosition(position),
+                        fastestLap: false,
+                        dnf: false
+                    )
+                }
+
+            cacheResults(results, cacheKey: cacheKey, timestampKey: timestampKey)
+            return results
+        } catch {
+            print("[F1API] Results error: \(error)")
+            return []
+        }
+    }
+
+    private func pointsForPosition(_ position: Int) -> Int {
+        switch position {
+        case 1: return 25
+        case 2: return 18
+        case 3: return 15
+        case 4: return 12
+        case 5: return 10
+        case 6: return 8
+        case 7: return 6
+        case 8: return 4
+        case 9: return 2
+        case 10: return 1
+        default: return 0
+        }
+    }
+
+    private func isResultsCacheValid(timestampKey: String) -> Bool {
+        let timestamp = defaults.double(forKey: timestampKey)
+        guard timestamp > 0 else { return false }
+        return Date().timeIntervalSince1970 - timestamp < cacheDuration
+    }
+
+    private func cacheResults(_ results: [DriverResult], cacheKey: String, timestampKey: String) {
+        if let data = try? JSONEncoder().encode(results) {
+            defaults.set(data, forKey: cacheKey)
+            defaults.set(Date().timeIntervalSince1970, forKey: timestampKey)
+        }
+    }
+
+    private func loadCachedResults(cacheKey: String) -> [DriverResult]? {
+        guard let data = defaults.data(forKey: cacheKey) else { return nil }
+        return try? JSONDecoder().decode([DriverResult].self, from: data)
+    }
 }

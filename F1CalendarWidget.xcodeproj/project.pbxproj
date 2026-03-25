@@ -68,10 +68,13 @@
 			membershipExceptions = (
 				CircuitDatabase.swift,
 				CircuitInfo.swift,
+				DriverResult.swift,
 				F1APIService.swift,
 				F1Calendar.swift,
 				F1Colors.swift,
 				Race.swift,
+				WeatherModels.swift,
+				WeatherService.swift,
 			);
 			target = CC4C038A2F69A65E0034CA8E /* F1CalendarWidget */;
 		};
