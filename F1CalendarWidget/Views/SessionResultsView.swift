@@ -42,8 +42,10 @@ struct SessionResultsView: View {
         }
         .background(Color("f1Background"))
         .navigationTitle(title)
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        #endif
     }
 }
 

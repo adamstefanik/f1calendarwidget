@@ -1,6 +1,5 @@
 import SwiftUI
 import WidgetKit
-import UIKit
 
 // MARK: - Entry View Router
 
@@ -283,17 +282,11 @@ struct DynamicTrackView: View {
     let raceShortName: String
 
     var body: some View {
-        let name = "track\(raceShortName)"
-
-        if let uiImage = UIImage(named: name, in: Bundle.main, compatibleWith: nil) {
-            Image(uiImage: uiImage)
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .foregroundColor(.f1Red)
-        } else {
-            TrackPlaceholder().stroke(Color.f1Red, lineWidth: 2)
-        }
+        Image("track\(raceShortName)")
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .foregroundColor(.f1Red)
     }
 }
 // MARK: - Previews
