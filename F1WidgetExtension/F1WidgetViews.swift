@@ -32,8 +32,8 @@ struct F1LargeView: View {
                 
                 // Track box
                 DynamicTrackView(raceShortName: race.shortName)
-                    .frame(width: 65, height: 65)
-                    .padding(8)
+                    .frame(width: 75, height: 75)
+                    .padding(2)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(Color.f1Border, lineWidth: 1)
@@ -139,8 +139,8 @@ struct F1MediumView: View {
                 
                 // Track box
                 DynamicTrackView(raceShortName: race.shortName)
-                    .frame(width: 45, height: 45)
-                    .padding(8)
+                    .frame(width: 55, height: 55)
+                    .padding(2)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(Color.f1Border, lineWidth: 1)

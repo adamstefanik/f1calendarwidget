@@ -37,7 +37,7 @@ struct F1Calendar {
 
         Race(id: 3, round: 3,
              name: "Japanese Grand Prix", shortName: "JPN", city: "Suzuka",
-             circuit: "Suzuka International Racing Course", country: "Japan", countryFlag: "🇯🇵 ",
+             circuit: "Suzuka International Racing Course", country: "Japan", countryFlag: "🇯🇵",
              raceDate: date(2026,3,29), qualifyingDate: date(2026,3,28),
              weekendStart: date(2026,3,27), sprint: false),
 
