@@ -1,0 +1,119 @@
+import SwiftUI
+
+struct RaceHeaderView: View {
+    let race: Race
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 12) {
+            // Track box
+            TrackPlaceholder()
+                .stroke(Color.f1Red, lineWidth: 2)
+                .frame(width: 96, height: 96)
+                .padding(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.f1Border, lineWidth: 1)
+                )
+
+            // Race info
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(race.countryFlag)
+                        .font(.system(size: 18))
+                    Text(race.city)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.f1Text)
+                }
+
+                Text("FORMULA 1 \(race.name.uppercased()) 2026")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundColor(.f1SecondaryText)
+                    .lineLimit(2)
+
+                Text("\(race.weekendDayRange) \(race.monthLabel) · \(race.circuit)")
+                    .font(.system(size: 10, weight: .regular))
+                    .foregroundColor(.f1SecondaryText)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            // Countdown + session badge
+            VStack(alignment: .trailing, spacing: 6) {
+                // Session badge
+                Text(race.currentSessionBadge)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(RoundedRectangle(cornerRadius: 3).fill(Color.f1Red))
+
+                // Countdown
+                HStack(alignment: .bottom, spacing: 6) {
+                    CountdownBlock(value: countdownDays, label: "DAYS")
+                    CountdownBlock(value: countdownHours, label: "HRS")
+                    CountdownBlock(value: countdownMins, label: "MINS")
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    // MARK: - Countdown
+
+    private var secondsUntilNext: Int {
+        let target = race.nextSessionDate ?? race.raceDate
+        return max(0, Int(target.timeIntervalSinceNow))
+    }
+
+    private var countdownDays: String {
+        String(format: "%02d", secondsUntilNext / 86400)
+    }
+
+    private var countdownHours: String {
+        String(format: "%02d", (secondsUntilNext % 86400) / 3600)
+    }
+
+    private var countdownMins: String {
+        String(format: "%02d", (secondsUntilNext % 3600) / 60)
+    }
+}
+
+// MARK: - Countdown Block
+
+private struct CountdownBlock: View {
+    let value: String
+    let label: String
+
+    var body: some View {
+        VStack(spacing: 1) {
+            Text(value)
+                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                .foregroundColor(.f1Text)
+            Text(label)
+                .font(.system(size: 7, weight: .medium))
+                .foregroundColor(.f1SecondaryText)
+        }
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    VStack {
+        RaceHeaderView(race: F1Calendar.fallbackRaces[2]) // Japan
+        Divider()
+    }
+    .background(Color("f1Background"))
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Live") {
+    VStack {
+        RaceHeaderView(race: .previewLive)
+        Divider()
+    }
+    .background(Color("f1Background"))
+    .preferredColorScheme(.dark)
+}
