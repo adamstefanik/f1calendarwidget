@@ -1,8 +1,10 @@
 import SwiftUI
 
 struct CalendarView: View {
-    private var races: [Race] { F1Calendar.races }
-    private var nextRace: Race? { F1Calendar.nextRace }
+    @ObservedObject var raceStore: RaceStore
+
+    private var races: [Race] { raceStore.races }
+    private var nextRace: Race? { raceStore.nextRace }
 
     var body: some View {
         NavigationStack {
@@ -65,6 +67,6 @@ struct CalendarView: View {
 // MARK: - Preview
 
 #Preview {
-    CalendarView()
+    CalendarView(raceStore: RaceStore())
         .preferredColorScheme(.dark)
 }

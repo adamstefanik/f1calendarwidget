@@ -2,17 +2,18 @@ import SwiftUI
 
 struct ContentView: View {
     @Binding var selectedTab: Int
+    @ObservedObject var raceStore: RaceStore
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            RaceDetailView(race: F1Calendar.nextRace ?? F1Calendar.fallbackRaces[0])
+            RaceDetailView(race: raceStore.nextRace ?? F1Calendar.fallbackRaces[0])
                 .tabItem {
                     Image(systemName: "car.fill")
                     Text("Race")
                 }
                 .tag(0)
 
-            CalendarView()
+            CalendarView(raceStore: raceStore)
                 .tabItem {
                     Image(systemName: "calendar")
                     Text("Calendar")
@@ -32,5 +33,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView(selectedTab: .constant(0))
+    ContentView(selectedTab: .constant(0), raceStore: RaceStore())
 }
