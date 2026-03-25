@@ -6,13 +6,21 @@ struct Session: Codable {
     let time: String
     let isHighlighted: Bool
     let startDate: Date?
+    let endDate: Date?
 
-    init(name: String, day: String, time: String, isHighlighted: Bool, startDate: Date? = nil) {
+    init(name: String, day: String, time: String, isHighlighted: Bool, startDate: Date? = nil, endDate: Date? = nil) {
         self.name = name
         self.day = day
         self.time = time
         self.isHighlighted = isHighlighted
         self.startDate = startDate
+        self.endDate = endDate
+    }
+
+    var isLive: Bool {
+        guard let start = startDate, let end = endDate else { return false }
+        let now = Date()
+        return now >= start && now <= end
     }
 }
 
@@ -106,32 +114,48 @@ struct Race: Identifiable, Codable {
         // Fallback to hardcoded sessions with computed startDate from weekendStart
         let cal = Calendar.current
         if sprint {
+            let day1 = weekendStart
+            let day2 = cal.date(byAdding: .day, value: 1, to: weekendStart)!
+            let day3 = cal.date(byAdding: .day, value: 2, to: weekendStart)!
             // Sprint: FRI / FRI / SAT / SAT / SUN
             return [
                 Session(name: "PRACTICE 1",   day: "FRIDAY",   time: "13:30 - 14:30", isHighlighted: false,
-                        startDate: cal.date(bySettingHour: 13, minute: 30, second: 0, of: weekendStart)),
+                        startDate: cal.date(bySettingHour: 13, minute: 30, second: 0, of: day1),
+                        endDate:   cal.date(bySettingHour: 14, minute: 30, second: 0, of: day1)),
                 Session(name: "SPRINT QUALI", day: "FRIDAY",   time: "17:30 - 18:30", isHighlighted: true,
-                        startDate: cal.date(bySettingHour: 17, minute: 30, second: 0, of: weekendStart)),
+                        startDate: cal.date(bySettingHour: 17, minute: 30, second: 0, of: day1),
+                        endDate:   cal.date(bySettingHour: 18, minute: 30, second: 0, of: day1)),
                 Session(name: "SPRINT",       day: "SATURDAY", time: "12:00 - 13:00", isHighlighted: true,
-                        startDate: cal.date(bySettingHour: 12, minute: 0, second: 0, of: cal.date(byAdding: .day, value: 1, to: weekendStart)!)),
+                        startDate: cal.date(bySettingHour: 12, minute: 0, second: 0, of: day2),
+                        endDate:   cal.date(bySettingHour: 13, minute: 0, second: 0, of: day2)),
                 Session(name: "QUALIFYING",   day: "SATURDAY", time: "16:00 - 17:00", isHighlighted: false,
-                        startDate: cal.date(bySettingHour: 16, minute: 0, second: 0, of: cal.date(byAdding: .day, value: 1, to: weekendStart)!)),
+                        startDate: cal.date(bySettingHour: 16, minute: 0, second: 0, of: day2),
+                        endDate:   cal.date(bySettingHour: 17, minute: 0, second: 0, of: day2)),
                 Session(name: "GRAND PRIX",   day: "SUNDAY",   time: "15:00",          isHighlighted: true,
-                        startDate: cal.date(bySettingHour: 15, minute: 0, second: 0, of: cal.date(byAdding: .day, value: 2, to: weekendStart)!)),
+                        startDate: cal.date(bySettingHour: 15, minute: 0, second: 0, of: day3),
+                        endDate:   cal.date(bySettingHour: 17, minute: 0, second: 0, of: day3)),
             ]
         } else {
+            let day1 = weekendStart
+            let day2 = cal.date(byAdding: .day, value: 1, to: weekendStart)!
+            let day3 = cal.date(byAdding: .day, value: 2, to: weekendStart)!
             // Regular: THU / THU / FRI / FRI / SAT
             return [
                 Session(name: "PRACTICE 1", day: "THURSDAY", time: "14:30 - 15:30", isHighlighted: false,
-                        startDate: cal.date(bySettingHour: 14, minute: 30, second: 0, of: weekendStart)),
+                        startDate: cal.date(bySettingHour: 14, minute: 30, second: 0, of: day1),
+                        endDate:   cal.date(bySettingHour: 15, minute: 30, second: 0, of: day1)),
                 Session(name: "PRACTICE 2", day: "THURSDAY", time: "18:00 - 19:00", isHighlighted: false,
-                        startDate: cal.date(bySettingHour: 18, minute: 0, second: 0, of: weekendStart)),
+                        startDate: cal.date(bySettingHour: 18, minute: 0, second: 0, of: day1),
+                        endDate:   cal.date(bySettingHour: 19, minute: 0, second: 0, of: day1)),
                 Session(name: "PRACTICE 3", day: "FRIDAY",   time: "14:30 - 15:30", isHighlighted: false,
-                        startDate: cal.date(bySettingHour: 14, minute: 30, second: 0, of: cal.date(byAdding: .day, value: 1, to: weekendStart)!)),
+                        startDate: cal.date(bySettingHour: 14, minute: 30, second: 0, of: day2),
+                        endDate:   cal.date(bySettingHour: 15, minute: 30, second: 0, of: day2)),
                 Session(name: "QUALIFYING", day: "FRIDAY",   time: "18:00 - 19:00", isHighlighted: true,
-                        startDate: cal.date(bySettingHour: 18, minute: 0, second: 0, of: cal.date(byAdding: .day, value: 1, to: weekendStart)!)),
+                        startDate: cal.date(bySettingHour: 18, minute: 0, second: 0, of: day2),
+                        endDate:   cal.date(bySettingHour: 19, minute: 0, second: 0, of: day2)),
                 Session(name: "GRAND PRIX", day: "SATURDAY", time: "18:00",          isHighlighted: true,
-                        startDate: cal.date(bySettingHour: 18, minute: 0, second: 0, of: cal.date(byAdding: .day, value: 2, to: weekendStart)!)),
+                        startDate: cal.date(bySettingHour: 18, minute: 0, second: 0, of: day3),
+                        endDate:   cal.date(bySettingHour: 20, minute: 0, second: 0, of: day3)),
             ]
         }
     }
@@ -141,4 +165,54 @@ struct Race: Identifiable, Codable {
         let now = Date()
         return sessions.first { ($0.startDate ?? .distantPast) > now }?.startDate
     }
+
+    /// Currently live session (between startDate and endDate)
+    var liveSession: Session? {
+        sessions.first { $0.isLive }
+    }
+
+    /// Badge label for the live session (e.g. "FP1" with LIVE indicator)
+    var liveSessionBadge: String? {
+        guard let live = liveSession else { return nil }
+        return sessionBadgeLabel(live.name)
+    }
 }
+
+// MARK: - Preview Helpers
+
+#if DEBUG
+extension Race {
+    /// Creates a mock race where FP1 is currently live (for SwiftUI previews and testing)
+    static var previewLive: Race {
+        let now = Date()
+        let cal = Calendar.current
+        let sessions = [
+            Session(name: "PRACTICE 1", day: "THURSDAY", time: "14:30 - 15:30", isHighlighted: false,
+                    startDate: cal.date(byAdding: .minute, value: -30, to: now),
+                    endDate: cal.date(byAdding: .minute, value: 30, to: now)),
+            Session(name: "PRACTICE 2", day: "THURSDAY", time: "18:00 - 19:00", isHighlighted: false,
+                    startDate: cal.date(byAdding: .hour, value: 3, to: now),
+                    endDate: cal.date(byAdding: .hour, value: 4, to: now)),
+            Session(name: "PRACTICE 3", day: "FRIDAY", time: "14:30 - 15:30", isHighlighted: false,
+                    startDate: cal.date(byAdding: .day, value: 1, to: now),
+                    endDate: cal.date(byAdding: .hour, value: 25, to: now)),
+            Session(name: "QUALIFYING", day: "FRIDAY", time: "18:00 - 19:00", isHighlighted: true,
+                    startDate: cal.date(byAdding: .hour, value: 27, to: now),
+                    endDate: cal.date(byAdding: .hour, value: 28, to: now)),
+            Session(name: "GRAND PRIX", day: "SATURDAY", time: "18:00", isHighlighted: true,
+                    startDate: cal.date(byAdding: .day, value: 2, to: now),
+                    endDate: cal.date(byAdding: .hour, value: 50, to: now)),
+        ]
+        return Race(
+            id: 99, round: 3,
+            name: "Japanese Grand Prix", shortName: "JPN", city: "Suzuka",
+            circuit: "Suzuka International Racing Course", country: "Japan", countryFlag: "🇯🇵",
+            raceDate: cal.date(byAdding: .day, value: 2, to: now)!,
+            qualifyingDate: cal.date(byAdding: .day, value: 1, to: now)!,
+            weekendStart: now,
+            sprint: false,
+            apiSessions: sessions
+        )
+    }
+}
+#endif

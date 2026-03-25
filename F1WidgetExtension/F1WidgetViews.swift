@@ -111,17 +111,18 @@ struct F1LargeView: View {
         }
     }
 
-    private var secondsUntilRace: Int {
-        max(0, Int(race.raceDate.timeIntervalSinceNow))
+    private var secondsUntilNext: Int {
+        let target = race.nextSessionDate ?? race.raceDate
+        return max(0, Int(target.timeIntervalSinceNow))
     }
     private var countdownDays: String {
-        String(format: "%02d", secondsUntilRace / 86400)
+        String(format: "%02d", secondsUntilNext / 86400)
     }
     private var countdownHours: String {
-        String(format: "%02d", (secondsUntilRace % 86400) / 3600)
+        String(format: "%02d", (secondsUntilNext % 86400) / 3600)
     }
     private var countdownMins: String {
-        String(format: "%02d", (secondsUntilRace % 3600) / 60)
+        String(format: "%02d", (secondsUntilNext % 3600) / 60)
     }
 }
 
@@ -195,17 +196,18 @@ struct F1MediumView: View {
         }
     }
 
-    private var secondsUntilRace: Int {
-        max(0, Int(race.raceDate.timeIntervalSinceNow))
+    private var secondsUntilNext: Int {
+        let target = race.nextSessionDate ?? race.raceDate
+        return max(0, Int(target.timeIntervalSinceNow))
     }
     private var mediumCountdownDays: String {
-        String(format: "%02d", secondsUntilRace / 86400)
+        String(format: "%02d", secondsUntilNext / 86400)
     }
     private var mediumCountdownHours: String {
-        String(format: "%02d", (secondsUntilRace % 86400) / 3600)
+        String(format: "%02d", (secondsUntilNext % 86400) / 3600)
     }
     private var mediumCountdownMins: String {
-        String(format: "%02d", (secondsUntilRace % 3600) / 60)
+        String(format: "%02d", (secondsUntilNext % 3600) / 60)
     }
 }
 
@@ -227,11 +229,21 @@ struct SessionRowView: View {
                     .foregroundColor(.f1SecondaryText)
                     .frame(width: 72, alignment: .leading)
 
-                Text(session.time)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(.f1Text)
-                    .frame(width: 100, alignment: .leading)
-                    .lineLimit(1)
+                if session.isLive {
+                    Text("LIVE")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(RoundedRectangle(cornerRadius: 3).fill(Color.f1Red))
+                        .frame(width: 100, alignment: .trailing)
+                } else {
+                    Text(session.time)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.f1Text)
+                        .frame(width: 100, alignment: .trailing)
+                        .lineLimit(1)
+                }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
@@ -265,8 +277,20 @@ struct CountdownUnit: View {
     F1WidgetEntry(date: .now, nextRace: F1Calendar.fallbackRaces.first!)
 }
 
+#Preview("Large – Live FP1", as: .systemLarge) {
+    F1CalendarWidget()
+} timeline: {
+    F1WidgetEntry(date: .now, nextRace: .previewLive)
+}
+
 #Preview("Medium", as: .systemMedium) {
     F1CalendarWidget()
 } timeline: {
     F1WidgetEntry(date: .now, nextRace: F1Calendar.fallbackRaces.first!)
+}
+
+#Preview("Medium – Live FP1", as: .systemMedium) {
+    F1CalendarWidget()
+} timeline: {
+    F1WidgetEntry(date: .now, nextRace: .previewLive)
 }

@@ -219,7 +219,8 @@ final class F1APIService {
                 day: day,
                 time: timeStr,
                 isHighlighted: highlighted,
-                startDate: startDate
+                startDate: startDate,
+                endDate: endDate
             ))
         }
 
