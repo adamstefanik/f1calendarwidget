@@ -6,3 +6,6 @@ build/
 
 # macOS
 .DS_Store
+
+# Claude
+.claude/
