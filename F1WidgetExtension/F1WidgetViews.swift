@@ -7,11 +7,15 @@ struct F1WidgetEntryView: View {
     var entry: F1WidgetEntry
     @Environment(\.widgetFamily) var family
 
+    private var deepLinkURL: URL {
+        URL(string: "f1calendar://race/\(entry.nextRace.id)")!
+    }
+
     var body: some View {
         switch family {
-        case .systemLarge:   F1LargeView(race: entry.nextRace)
-        case .systemMedium:  F1MediumView(race: entry.nextRace)
-        default:             F1LargeView(race: entry.nextRace)
+        case .systemLarge:   F1LargeView(race: entry.nextRace).widgetURL(deepLinkURL)
+        case .systemMedium:  F1MediumView(race: entry.nextRace).widgetURL(deepLinkURL)
+        default:             F1LargeView(race: entry.nextRace).widgetURL(deepLinkURL)
         }
     }
 }
