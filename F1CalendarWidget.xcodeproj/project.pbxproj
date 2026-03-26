@@ -53,6 +53,8 @@
 		CC4C03982F69A65F0034CA8E /* F1CalendarWidgetTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = F1CalendarWidgetTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC4C03A22F69A65F0034CA8E /* F1CalendarWidgetUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = F1CalendarWidgetUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC4C03C02F69B0000034CA8E /* F1WidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = F1WidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		CCDD33ED2F753D4D0035D47E /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
+		CCDD33EF2F753D4D0035D47E /* UserNotificationsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotificationsUI.framework; path = System/Library/Frameworks/UserNotificationsUI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -118,6 +120,11 @@
 			path = F1WidgetExtension;
 			sourceTree = "<group>";
 		};
+		CCDD33F12F753D4D0035D47E /* F1NotificationContent */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = F1NotificationContent;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -159,6 +166,8 @@
 				CC4C03C12F69B0000034CA8E /* F1WidgetExtension */,
 				CC4C039B2F69A65F0034CA8E /* F1CalendarWidgetTests */,
 				CC4C03A52F69A65F0034CA8E /* F1CalendarWidgetUITests */,
+				CCDD33F12F753D4D0035D47E /* F1NotificationContent */,
+				CCDD33EC2F753D4D0035D47E /* Frameworks */,
 				CC4C038C2F69A65E0034CA8E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -172,6 +181,15 @@
 				CC4C03C02F69B0000034CA8E /* F1WidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		CCDD33EC2F753D4D0035D47E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				CCDD33ED2F753D4D0035D47E /* UserNotifications.framework */,
+				CCDD33EF2F753D4D0035D47E /* UserNotificationsUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

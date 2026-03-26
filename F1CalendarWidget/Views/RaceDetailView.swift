@@ -12,6 +12,7 @@ struct RaceDetailView: View {
 
     @State private var weatherState: WeatherLoadState = .loading
     @State private var raceResults: [DriverResult] = []
+    @State private var screenWidth: CGFloat = 393
 
     private var circuitInfo: CircuitInfo? {
         CircuitDatabase.info(for: race.shortName)
@@ -134,10 +135,11 @@ struct RaceDetailView: View {
             }
             .background(Color("f1Background"))
             .tint(.f1Red)
+            .overlay(GeometryReader { geo in Color.clear.preference(key: ScreenWidthKey.self, value: geo.size.width) })
+            .onPreferenceChange(ScreenWidthKey.self) { screenWidth = $0 }
             .simultaneousGesture(
                 DragGesture(minimumDistance: 50, coordinateSpace: .global)
                     .onEnded { value in
-                        let screenWidth = UIScreen.main.bounds.width
                         let startX = value.startLocation.x
                         let horizontal = value.translation.width
                         guard abs(horizontal) > abs(value.translation.height) else { return }
@@ -200,6 +202,15 @@ struct RaceDetailView: View {
             ?? race.sessions.last { $0.sessionKey != nil }
         guard let key = raceSession?.sessionKey else { return }
         raceResults = await F1APIService.shared.fetchResults(for: key)
+    }
+}
+
+// MARK: - Screen Width Preference Key
+
+private struct ScreenWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 393
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 

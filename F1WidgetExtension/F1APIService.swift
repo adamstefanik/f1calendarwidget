@@ -274,7 +274,7 @@ final class F1APIService {
 
     // MARK: - Lookup Tables
 
-    private static let countryFlags: [String: String] = [
+    static let countryFlags: [String: String] = [
         "AUS": "🇦🇺", "CHN": "🇨🇳", "JPN": "🇯🇵", "BRN": "🇧🇭",
         "KSA": "🇸🇦", "USA": "🇺🇸", "ITA": "🇮🇹", "MCO": "🇲🇨",
         "ESP": "🇪🇸", "CAN": "🇨🇦", "AUT": "🇦🇹", "GBR": "🇬🇧",

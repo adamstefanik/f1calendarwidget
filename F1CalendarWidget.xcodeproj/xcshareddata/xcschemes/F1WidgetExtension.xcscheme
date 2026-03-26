@@ -44,6 +44,30 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
       shouldAutocreateTestPlan = "YES">
+      <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "CC4C03A12F69A65F0034CA8E"
+               BuildableName = "F1CalendarWidgetUITests.xctest"
+               BlueprintName = "F1CalendarWidgetUITests"
+               ReferencedContainer = "container:F1CalendarWidget.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "CC4C03972F69A65F0034CA8E"
+               BuildableName = "F1CalendarWidgetTests.xctest"
+               BlueprintName = "F1CalendarWidgetTests"
+               ReferencedContainer = "container:F1CalendarWidget.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+      </Testables>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"

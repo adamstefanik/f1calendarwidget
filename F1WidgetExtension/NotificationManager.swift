@@ -26,7 +26,6 @@ final class NotificationManager {
         cancelAll()
 
         let reminderInterval = TimeInterval(settings.reminderMinutes * 60)
-
         for race in races where !race.isCompleted {
             guard let sessions = race.apiSessions ?? Optional(race.sessions) else { continue }
 
@@ -38,8 +37,8 @@ final class NotificationManager {
                 guard fireDate > Date() else { continue }
 
                 let content = UNMutableNotificationContent()
-                content.title = "\(session.name)"
-                content.body = "\(race.name) \(session.name.lowercased()) starts in \(settings.reminderMinutes) minutes"
+                content.title = race.name
+                content.body = "\(session.name) starts in \(reminderLabel(settings.reminderMinutes))"
                 content.sound = .default
 
                 let components = Calendar.current.dateComponents(
@@ -67,6 +66,15 @@ final class NotificationManager {
     }
 
     // MARK: - Helpers
+
+    private func reminderLabel(_ minutes: Int) -> String {
+        if minutes < 60 {
+            return "\(minutes) min"
+        } else {
+            let hours = minutes / 60
+            return "\(hours) hour\(hours > 1 ? "s" : "")"
+        }
+    }
 
     private func shouldNotify(session: Session, settings: SettingsManager) -> Bool {
         switch session.name {
