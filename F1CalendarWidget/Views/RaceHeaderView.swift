@@ -16,14 +16,12 @@ struct RaceHeaderView: View {
             
             // Race info
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 2) {
-                    Text(race.countryFlag)
-                        .font(.system(size: 18))
-                        .padding(.top, 10)
-                    Text(race.city)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.f1Text)
-                }
+                Text(race.city)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.f1Text)
+                    .padding(.top, 10)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
                 
                 Text("FORMULA 1 \(race.name.uppercased()) 2026")
                     .font(.system(size: 9, weight: .medium))
@@ -42,25 +40,31 @@ struct RaceHeaderView: View {
             // Countdown + session badge
             VStack(alignment: .trailing, spacing: 6) {
                 // Session badge
-                Text(race.currentSessionBadge)
+                Text(badgeLabel)
                     .font(.system(size: 10, weight: .bold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
-                    .background(RoundedRectangle(cornerRadius: 3).fill(Color.f1Red))
+                    .background(RoundedRectangle(cornerRadius: 3).fill(race.isCanceled ? Color.f1SecondaryText : Color.f1Red))
                     .padding(.top, 35)
 
                 // Countdown
                 HStack(alignment: .bottom, spacing: 6) {
-                    CountdownBlock(value: countdownDays, label: "DAYS")
-                    CountdownBlock(value: countdownHours, label: "HRS")
-                    CountdownBlock(value: countdownMins, label: "MINS")
+                    CountdownBlock(value: race.isCanceled ? "00" : countdownDays, label: "DAYS")
+                    CountdownBlock(value: race.isCanceled ? "00" : countdownHours, label: "HRS")
+                    CountdownBlock(value: race.isCanceled ? "00" : countdownMins, label: "MINS")
                 }
             }
         }
-        .padding(.leading, 30)
-        .padding(.trailing, 30)
+        .padding(.leading, 34)
+        .padding(.trailing, 34)
         .padding(.top, 30)
+    }
+
+    private var badgeLabel: String {
+        if race.isCanceled { return "CANCELED" }
+        if race.isCompleted { return "FINISHED" }
+        return race.currentSessionBadge
     }
 
     // MARK: - Countdown

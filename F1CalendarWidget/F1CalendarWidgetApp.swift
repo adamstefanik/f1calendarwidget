@@ -19,8 +19,7 @@ struct F1CalendarWidgetApp: App {
     }
 
     private func handleDeepLink(_ url: URL) {
-        guard url.scheme == "f1calendar",
-              url.host == "race" else { return }
+        guard url.scheme == "f1calendar" else { return }
         selectedTab = 0
     }
 }
@@ -30,7 +29,6 @@ struct F1CalendarWidgetApp: App {
 final class RaceStore: ObservableObject {
     @Published var races: [Race] = F1Calendar.fallbackRaces
     @Published var isLoading = true
-
     var nextRace: Race? { races.first { !$0.isCompleted } }
 
     @MainActor
