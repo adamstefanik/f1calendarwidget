@@ -313,7 +313,11 @@ final class F1APIService {
     private let resultsCacheKey = "F1CachedResults_v4"
     private let resultsCacheTimestampKey = "F1ResultsCacheTimestamp_v4"
 
-    func fetchResults(for sessionKey: Int) async -> [DriverResult] {
+    enum SessionType {
+        case race, sprint, timing
+    }
+
+    func fetchResults(for sessionKey: Int, sessionType: SessionType = .race) async -> [DriverResult] {
         // Check cache
         let cacheKey = "\(resultsCacheKey)_\(sessionKey)"
         let timestampKey = "\(resultsCacheTimestampKey)_\(sessionKey)"
@@ -350,96 +354,12 @@ final class F1APIService {
             let driverMap = Dictionary(grouping: drivers, by: \.driver_number)
             let lapsByDriver = Dictionary(grouping: laps, by: \.driver_number)
 
-            // Get final positions (last entry per driver, sorted by date)
-            let sortedPositions = positions.sorted { ($0.date ?? "") < ($1.date ?? "") }
-            var finalPositions: [Int: OpenF1Position] = [:]
-            for pos in sortedPositions {
-                if pos.position != nil {
-                    finalPositions[pos.driver_number] = pos
-                }
-            }
-
-            // Calculate total race time and fastest lap per driver
-            let leaderLapCount = lapsByDriver.values.map { $0.map(\.lap_number).max() ?? 0 }.max() ?? 0
-            let dnfThreshold = max(1, leaderLapCount - 5)
-
-            var driverTotalTimes: [Int: Double] = [:]
-            var driverFastestLaps: [Int: Double] = [:]
-
-            for (driverNum, driverLaps) in lapsByDriver {
-                let validLaps = driverLaps.filter { $0.lap_duration != nil }
-                let totalTime = validLaps.compactMap(\.lap_duration).reduce(0, +)
-                if totalTime > 0 { driverTotalTimes[driverNum] = totalTime }
-
-                if let fastest = validLaps.compactMap(\.lap_duration).min() {
-                    driverFastestLaps[driverNum] = fastest
-                }
-            }
-
-            // Overall fastest lap
-            let overallFastestDriver = driverFastestLaps.min(by: { $0.value < $1.value })?.key
-
-            // P1 total time for delta calculation
-            let p1Driver = finalPositions.values.first { $0.position == 1 }
-            let p1TotalTime = p1Driver.flatMap { driverTotalTimes[$0.driver_number] }
-
-            // Build results, separating finishers and DNFs
-            var finishers: [(pos: OpenF1Position, driver: OpenF1Driver)] = []
-            var dnfDrivers: [(pos: OpenF1Position, driver: OpenF1Driver)] = []
-
-            for pos in finalPositions.values {
-                guard pos.position != nil,
-                      let driver = driverMap[pos.driver_number]?.first else { continue }
-                let maxLap = lapsByDriver[pos.driver_number]?.map(\.lap_number).max() ?? 0
-                if maxLap < dnfThreshold {
-                    dnfDrivers.append((pos, driver))
-                } else {
-                    finishers.append((pos, driver))
-                }
-            }
-
-            finishers.sort { ($0.pos.position ?? 99) < ($1.pos.position ?? 99) }
-            dnfDrivers.sort { (lapsByDriver[$0.pos.driver_number]?.map(\.lap_number).max() ?? 0) >
-                              (lapsByDriver[$1.pos.driver_number]?.map(\.lap_number).max() ?? 0) }
-
-            var results: [DriverResult] = []
-
-            for item in finishers {
-                let position = item.pos.position!
-                let fullName = "\(item.driver.first_name) \(item.driver.last_name)"
-
-                let time: String
-                if position == 1, let total = driverTotalTimes[item.pos.driver_number] {
-                    time = formatTotalTime(total)
-                } else if let p1Time = p1TotalTime, let driverTime = driverTotalTimes[item.pos.driver_number] {
-                    let gap = driverTime - p1Time
-                    time = gap > 0 ? "+\(formatGap(gap))" : ""
-                } else {
-                    time = ""
-                }
-
-                results.append(DriverResult(
-                    position: position,
-                    driverName: fullName,
-                    team: Self.fullTeamNames[item.driver.team_name ?? ""] ?? item.driver.team_name ?? "Unknown",
-                    time: time,
-                    points: pointsForPosition(position),
-                    fastestLap: item.pos.driver_number == overallFastestDriver,
-                    dnf: false
-                ))
-            }
-
-            for (i, item) in dnfDrivers.enumerated() {
-                let fullName = "\(item.driver.first_name) \(item.driver.last_name)"
-                results.append(DriverResult(
-                    position: finishers.count + i + 1,
-                    driverName: fullName,
-                    team: Self.fullTeamNames[item.driver.team_name ?? ""] ?? item.driver.team_name ?? "Unknown",
-                    time: "DNF",
-                    points: 0,
-                    fastestLap: false,
-                    dnf: true
-                ))
+            let results: [DriverResult]
+            switch sessionType {
+            case .timing:
+                results = buildTimingResults(positions: positions, drivers: driverMap, lapsByDriver: lapsByDriver)
+            case .race, .sprint:
+                results = buildRaceResults(positions: positions, drivers: driverMap, lapsByDriver: lapsByDriver, isSprint: sessionType == .sprint)
             }
 
             cacheResults(results, cacheKey: cacheKey, timestampKey: timestampKey)
@@ -448,6 +368,172 @@ final class F1APIService {
             print("[F1API] Results error: \(error)")
             return []
         }
+    }
+
+    // MARK: - Timing Results (Practice, Qualifying, Sprint Quali)
+
+    private func buildTimingResults(positions: [OpenF1Position], drivers: [Int: [OpenF1Driver]], lapsByDriver: [Int: [OpenF1Lap]]) -> [DriverResult] {
+        // Get fastest lap per driver
+        var driverFastestLaps: [Int: Double] = [:]
+        for (driverNum, driverLaps) in lapsByDriver {
+            let validLaps = driverLaps.filter { $0.lap_duration != nil && !$0.is_pit_out_lap }
+            if let fastest = validLaps.compactMap(\.lap_duration).min() {
+                driverFastestLaps[driverNum] = fastest
+            }
+        }
+
+        // Sort by fastest lap time
+        let sorted = driverFastestLaps.sorted { $0.value < $1.value }
+        let p1Time = sorted.first?.value
+
+        var results: [DriverResult] = []
+
+        for (index, item) in sorted.enumerated() {
+            guard let driver = drivers[item.key]?.first else { continue }
+            let fullName = "\(driver.first_name) \(driver.last_name)"
+            let position = index + 1
+
+            let time: String
+            if position == 1 {
+                time = formatLapTime(item.value)
+            } else if let p1 = p1Time {
+                let gap = item.value - p1
+                time = "+\(formatGap(gap))"
+            } else {
+                time = ""
+            }
+
+            results.append(DriverResult(
+                position: position,
+                driverName: fullName,
+                team: Self.fullTeamNames[driver.team_name ?? ""] ?? driver.team_name ?? "Unknown",
+                time: time,
+                points: 0,
+                fastestLap: false,
+                dnf: false
+            ))
+        }
+
+        // Drivers with no lap time
+        let driversWithTime = Set(driverFastestLaps.keys)
+        let allDriverNums = Set(drivers.keys)
+        let noTimeDrivers = allDriverNums.subtracting(driversWithTime)
+
+        for driverNum in noTimeDrivers {
+            guard let driver = drivers[driverNum]?.first else { continue }
+            let fullName = "\(driver.first_name) \(driver.last_name)"
+            results.append(DriverResult(
+                position: results.count + 1,
+                driverName: fullName,
+                team: Self.fullTeamNames[driver.team_name ?? ""] ?? driver.team_name ?? "Unknown",
+                time: "NO TIME",
+                points: 0,
+                fastestLap: false,
+                dnf: false
+            ))
+        }
+
+        return results
+    }
+
+    // MARK: - Race/Sprint Results
+
+    private func buildRaceResults(positions: [OpenF1Position], drivers: [Int: [OpenF1Driver]], lapsByDriver: [Int: [OpenF1Lap]], isSprint: Bool) -> [DriverResult] {
+        // Get final positions
+        let sortedPositions = positions.sorted { ($0.date ?? "") < ($1.date ?? "") }
+        var finalPositions: [Int: OpenF1Position] = [:]
+        for pos in sortedPositions {
+            if pos.position != nil {
+                finalPositions[pos.driver_number] = pos
+            }
+        }
+
+        // Calculate total race time and fastest lap per driver
+        let leaderLapCount = lapsByDriver.values.map { $0.map(\.lap_number).max() ?? 0 }.max() ?? 0
+        let dnfThreshold = max(1, leaderLapCount - 5)
+
+        var driverTotalTimes: [Int: Double] = [:]
+        var driverFastestLaps: [Int: Double] = [:]
+
+        for (driverNum, driverLaps) in lapsByDriver {
+            let validLaps = driverLaps.filter { $0.lap_duration != nil }
+            let totalTime = validLaps.compactMap(\.lap_duration).reduce(0, +)
+            if totalTime > 0 { driverTotalTimes[driverNum] = totalTime }
+
+            if let fastest = validLaps.compactMap(\.lap_duration).min() {
+                driverFastestLaps[driverNum] = fastest
+            }
+        }
+
+        let overallFastestDriver = driverFastestLaps.min(by: { $0.value < $1.value })?.key
+        let p1Driver = finalPositions.values.first { $0.position == 1 }
+        let p1TotalTime = p1Driver.flatMap { driverTotalTimes[$0.driver_number] }
+
+        var finishers: [(pos: OpenF1Position, driver: OpenF1Driver)] = []
+        var dnfDrivers: [(pos: OpenF1Position, driver: OpenF1Driver)] = []
+
+        for pos in finalPositions.values {
+            guard pos.position != nil,
+                  let driver = drivers[pos.driver_number]?.first else { continue }
+            let maxLap = lapsByDriver[pos.driver_number]?.map(\.lap_number).max() ?? 0
+            if maxLap < dnfThreshold {
+                dnfDrivers.append((pos, driver))
+            } else {
+                finishers.append((pos, driver))
+            }
+        }
+
+        finishers.sort { ($0.pos.position ?? 99) < ($1.pos.position ?? 99) }
+        dnfDrivers.sort { (lapsByDriver[$0.pos.driver_number]?.map(\.lap_number).max() ?? 0) >
+                          (lapsByDriver[$1.pos.driver_number]?.map(\.lap_number).max() ?? 0) }
+
+        var results: [DriverResult] = []
+
+        for item in finishers {
+            let position = item.pos.position!
+            let fullName = "\(item.driver.first_name) \(item.driver.last_name)"
+
+            let time: String
+            if position == 1, let total = driverTotalTimes[item.pos.driver_number] {
+                time = formatTotalTime(total)
+            } else if let p1Time = p1TotalTime, let driverTime = driverTotalTimes[item.pos.driver_number] {
+                let gap = driverTime - p1Time
+                time = gap > 0 ? "+\(formatGap(gap))" : ""
+            } else {
+                time = ""
+            }
+
+            results.append(DriverResult(
+                position: position,
+                driverName: fullName,
+                team: Self.fullTeamNames[item.driver.team_name ?? ""] ?? item.driver.team_name ?? "Unknown",
+                time: time,
+                points: pointsForPosition(position, isSprint: isSprint),
+                fastestLap: item.pos.driver_number == overallFastestDriver,
+                dnf: false
+            ))
+        }
+
+        for (i, item) in dnfDrivers.enumerated() {
+            let fullName = "\(item.driver.first_name) \(item.driver.last_name)"
+            results.append(DriverResult(
+                position: finishers.count + i + 1,
+                driverName: fullName,
+                team: Self.fullTeamNames[item.driver.team_name ?? ""] ?? item.driver.team_name ?? "Unknown",
+                time: "DNF",
+                points: 0,
+                fastestLap: false,
+                dnf: true
+            ))
+        }
+
+        return results
+    }
+
+    private func formatLapTime(_ seconds: Double) -> String {
+        let mins = Int(seconds) / 60
+        let secs = seconds - Double(mins * 60)
+        return String(format: "%d:%06.3f", mins, secs)
     }
 
     private func formatTotalTime(_ seconds: Double) -> String {
@@ -470,7 +556,20 @@ final class F1APIService {
         return String(format: "%.3fs", seconds)
     }
 
-    private func pointsForPosition(_ position: Int) -> Int {
+    private func pointsForPosition(_ position: Int, isSprint: Bool = false) -> Int {
+        if isSprint {
+            switch position {
+            case 1: return 8
+            case 2: return 7
+            case 3: return 6
+            case 4: return 5
+            case 5: return 4
+            case 6: return 3
+            case 7: return 2
+            case 8: return 1
+            default: return 0
+            }
+        }
         switch position {
         case 1: return 25
         case 2: return 18

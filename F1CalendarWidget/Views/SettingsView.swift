@@ -73,7 +73,7 @@ struct SettingsView: View {
             .onChange(of: settings.notifyRace) { rescheduleNotifications() }
             .onChange(of: settings.reminderMinutes) { rescheduleNotifications() }
             .task {
-                await NotificationManager.shared.requestPermission()
+                _ = await NotificationManager.shared.requestPermission()
             }
         }
     }

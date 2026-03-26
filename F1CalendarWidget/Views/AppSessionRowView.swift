@@ -40,17 +40,10 @@ struct AppSessionRowView: View {
                     .foregroundColor(.f1SecondaryText)
                     .frame(width: 95, alignment: .leading)
             } else if isCompleted {
-                HStack(spacing: 4) {
-                    Text("COMPLETED")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(.f1SecondaryText)
-                    if hasResults {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 8, weight: .medium))
-                            .foregroundColor(.f1SecondaryText)
-                    }
-                }
-                .frame(width: 95, alignment: .leading)
+                Text("COMPLETED")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.f1SecondaryText)
+                    .frame(width: 95, alignment: .leading)
             } else {
                 Text(session.day)
                     .font(.system(size: 10, weight: .regular))
@@ -66,6 +59,16 @@ struct AppSessionRowView: View {
                     .padding(.vertical, 3)
                     .background(RoundedRectangle(cornerRadius: 3).fill(Color.f1Red))
                     .frame(width: 100, alignment: .trailing)
+            } else if hasResults {
+                HStack(spacing: 4) {
+                    Text("VIEW RESULTS")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.f1Red)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundColor(.f1Red)
+                }
+                .frame(width: 100, alignment: .trailing)
             } else {
                 Text(session.time)
                     .font(.system(size: 10, weight: .medium))
@@ -86,6 +89,14 @@ struct SessionResultsLoader: View {
     let session: Session
     @State private var results: [DriverResult] = []
     @State private var isLoading = true
+
+    private var sessionDisplayType: SessionDisplayType {
+        switch session.name {
+        case "GRAND PRIX": return .race
+        case "SPRINT": return .sprint
+        default: return .timing
+        }
+    }
 
     var body: some View {
         Group {
@@ -109,7 +120,11 @@ struct SessionResultsLoader: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color("f1Background"))
             } else {
-                SessionResultsView(title: session.name, results: results)
+                SessionResultsView(
+                    title: session.name,
+                    results: results,
+                    displayType: sessionDisplayType
+                )
             }
         }
         .task {
@@ -117,7 +132,14 @@ struct SessionResultsLoader: View {
                 isLoading = false
                 return
             }
-            results = await F1APIService.shared.fetchResults(for: key)
+            let type: F1APIService.SessionType = {
+                switch session.name {
+                case "GRAND PRIX": return .race
+                case "SPRINT": return .sprint
+                default: return .timing
+                }
+            }()
+            results = await F1APIService.shared.fetchResults(for: key, sessionType: type)
             isLoading = false
         }
     }
