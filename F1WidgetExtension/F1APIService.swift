@@ -42,6 +42,13 @@ struct OpenF1Driver: Codable {
     let name_acronym: String?
 }
 
+struct OpenF1Lap: Codable {
+    let driver_number: Int
+    let lap_number: Int
+    let lap_duration: Double?
+    let is_pit_out_lap: Bool
+}
+
 // MARK: - API Service
 
 final class F1APIService {
@@ -49,8 +56,8 @@ final class F1APIService {
     static let shared = F1APIService()
 
     private let baseURL = "https://api.openf1.org/v1"
-    private let cacheKey = "F1CachedRaces"
-    private let cacheTimestampKey = "F1CacheTimestamp"
+    private let cacheKey = "F1CachedRaces_v3"
+    private let cacheTimestampKey = "F1CacheTimestamp_v3"
     private let cacheDuration: TimeInterval = 6 * 3600
 
     private let defaults = UserDefaults(suiteName: "group.com.f1calendar.shared") ?? .standard
@@ -136,11 +143,10 @@ final class F1APIService {
     private func convertToRace(meeting: OpenF1Meeting, sessions: [OpenF1Session], index: Int) -> Race {
         let sortedSessions = sessions.sorted { $0.date_start < $1.date_start }
 
-        let raceSession = sortedSessions.first { $0.session_type == "Race" }
+        let raceSession = sortedSessions.last { $0.session_type == "Race" }
         let qualSession = sortedSessions.first { $0.session_type == "Qualifying" }
         let fp1Session = sortedSessions.first { $0.session_type == "Practice" }
-        let sprintSession = sortedSessions.first { $0.session_type == "Sprint" }
-        let isSprint = sprintSession != nil
+        let isSprint = sortedSessions.contains { $0.session_name.lowercased().contains("sprint") }
 
         let raceDate = parseDate(raceSession?.date_start ?? meeting.date_end)
         let qualDate = parseDate(qualSession?.date_start ?? meeting.date_end)
@@ -149,6 +155,7 @@ final class F1APIService {
         let country = meeting.country_name
         let shortName = Self.countryShortNames[meeting.country_code] ?? meeting.country_code
         let flag = Self.countryFlags[meeting.country_code] ?? "🏁"
+        let canceled = Self.canceledRaces.contains(meeting.country_code)
 
         let widgetSessions = buildSessions(from: sortedSessions, isSprint: isSprint)
 
@@ -165,6 +172,7 @@ final class F1APIService {
             qualifyingDate: qualDate,
             weekendStart: weekendStart,
             sprint: isSprint,
+            isCanceled: canceled,
             apiSessions: widgetSessions.isEmpty ? nil : widgetSessions
         )
     }
@@ -191,8 +199,13 @@ final class F1APIService {
                 timeStr = "\(startTime) - \(endTime)"
 
             case "Qualifying":
-                name = "QUALIFYING"
-                highlighted = !isSprint
+                if api.session_name.lowercased().contains("sprint") {
+                    name = "SPRINT QUALI"
+                    highlighted = true
+                } else {
+                    name = "QUALIFYING"
+                    highlighted = !isSprint
+                }
                 timeStr = "\(startTime) - \(endTime)"
 
             case "Sprint Qualifying", "Sprint Shootout":
@@ -206,9 +219,15 @@ final class F1APIService {
                 timeStr = "\(startTime) - \(endTime)"
 
             case "Race":
-                name = "GRAND PRIX"
-                highlighted = true
-                timeStr = startTime
+                if api.session_name.lowercased().contains("sprint") {
+                    name = "SPRINT"
+                    highlighted = true
+                    timeStr = "\(startTime) - \(endTime)"
+                } else {
+                    name = "GRAND PRIX"
+                    highlighted = true
+                    timeStr = startTime
+                }
 
             default:
                 continue
@@ -220,7 +239,8 @@ final class F1APIService {
                 time: timeStr,
                 isHighlighted: highlighted,
                 startDate: startDate,
-                endDate: endDate
+                endDate: endDate,
+                sessionKey: api.session_key
             ))
         }
 
@@ -255,27 +275,43 @@ final class F1APIService {
     // MARK: - Lookup Tables
 
     private static let countryFlags: [String: String] = [
-        "AUS": "🇦🇺", "CHN": "🇨🇳", "JPN": "🇯🇵", "BHR": "🇧🇭",
-        "SAU": "🇸🇦", "USA": "🇺🇸", "ITA": "🇮🇹", "MCO": "🇲🇨",
+        "AUS": "🇦🇺", "CHN": "🇨🇳", "JPN": "🇯🇵", "BRN": "🇧🇭",
+        "KSA": "🇸🇦", "USA": "🇺🇸", "ITA": "🇮🇹", "MCO": "🇲🇨",
         "ESP": "🇪🇸", "CAN": "🇨🇦", "AUT": "🇦🇹", "GBR": "🇬🇧",
         "BEL": "🇧🇪", "NLD": "🇳🇱", "AZE": "🇦🇿", "SGP": "🇸🇬",
         "MEX": "🇲🇽", "BRA": "🇧🇷", "QAT": "🇶🇦", "ARE": "🇦🇪",
-        "HUN": "🇭🇺",
+        "UAE": "🇦🇪", "HUN": "🇭🇺", "NED": "🇳🇱", "MON": "🇲🇨",
     ]
 
     private static let countryShortNames: [String: String] = [
-        "AUS": "AUS", "CHN": "CHN", "JPN": "JPN", "BHR": "BHR",
-        "SAU": "SAU", "USA": "USA", "ITA": "ITA", "MCO": "MON",
+        "AUS": "AUS", "CHN": "CHN", "JPN": "JPN", "BRN": "BHR",
+        "KSA": "SAU", "USA": "USA", "ITA": "ITA", "MCO": "MON",
         "ESP": "ESP", "CAN": "CAN", "AUT": "AUT", "GBR": "GBR",
         "BEL": "BEL", "NLD": "NED", "AZE": "AZE", "SGP": "SGP",
         "MEX": "MEX", "BRA": "BRA", "QAT": "QAT", "ARE": "ABU",
-        "HUN": "HUN",
+        "UAE": "ABU", "HUN": "HUN", "NED": "NED", "MON": "MON",
+    ]
+
+    private static let canceledRaces: Set<String> = ["BRN", "KSA"]
+
+    private static let fullTeamNames: [String: String] = [
+        "Alpine": "BWT Alpine F1 Team",
+        "Aston Martin": "Aston Martin Aramco F1 Team",
+        "Audi": "Audi F1 Team",
+        "Cadillac": "Cadillac F1 Team",
+        "Ferrari": "Scuderia Ferrari",
+        "Haas F1 Team": "MoneyGram Haas F1 Team",
+        "McLaren": "McLaren F1 Team",
+        "Mercedes": "Mercedes-AMG Petronas F1 Team",
+        "Racing Bulls": "Visa Cash App Racing Bulls",
+        "Red Bull Racing": "Oracle Red Bull Racing",
+        "Williams": "Williams Racing",
     ]
 
     // MARK: - Race Results
 
-    private let resultsCacheKey = "F1CachedResults"
-    private let resultsCacheTimestampKey = "F1ResultsCacheTimestamp"
+    private let resultsCacheKey = "F1CachedResults_v4"
+    private let resultsCacheTimestampKey = "F1ResultsCacheTimestamp_v4"
 
     func fetchResults(for sessionKey: Int) async -> [DriverResult] {
         // Check cache
@@ -289,47 +325,122 @@ final class F1APIService {
 
         // Fetch from OpenF1
         guard let positionsURL = URL(string: "\(baseURL)/position?session_key=\(sessionKey)&position<=20"),
-              let driversURL = URL(string: "\(baseURL)/drivers?session_key=\(sessionKey)") else {
+              let driversURL = URL(string: "\(baseURL)/drivers?session_key=\(sessionKey)"),
+              let lapsURL = URL(string: "\(baseURL)/laps?session_key=\(sessionKey)") else {
             return []
         }
 
         do {
             async let posData = URLSession.shared.data(from: positionsURL)
             async let drvData = URLSession.shared.data(from: driversURL)
+            async let lapData = URLSession.shared.data(from: lapsURL)
 
             let (pData, pResp) = try await posData
             let (dData, dResp) = try await drvData
+            let (lData, lResp) = try await lapData
 
             guard let pH = pResp as? HTTPURLResponse, pH.statusCode == 200,
-                  let dH = dResp as? HTTPURLResponse, dH.statusCode == 200 else { return [] }
+                  let dH = dResp as? HTTPURLResponse, dH.statusCode == 200,
+                  let lH = lResp as? HTTPURLResponse, lH.statusCode == 200 else { return [] }
 
             let positions = try JSONDecoder().decode([OpenF1Position].self, from: pData)
             let drivers = try JSONDecoder().decode([OpenF1Driver].self, from: dData)
+            let laps = try JSONDecoder().decode([OpenF1Lap].self, from: lData)
 
             let driverMap = Dictionary(grouping: drivers, by: \.driver_number)
+            let lapsByDriver = Dictionary(grouping: laps, by: \.driver_number)
 
-            // Get final positions (last entry per driver)
+            // Get final positions (last entry per driver, sorted by date)
+            let sortedPositions = positions.sorted { ($0.date ?? "") < ($1.date ?? "") }
             var finalPositions: [Int: OpenF1Position] = [:]
-            for pos in positions {
-                finalPositions[pos.driver_number] = pos
+            for pos in sortedPositions {
+                if pos.position != nil {
+                    finalPositions[pos.driver_number] = pos
+                }
             }
 
-            let results: [DriverResult] = finalPositions.values
-                .sorted { ($0.position ?? 99) < ($1.position ?? 99) }
-                .compactMap { pos in
-                    guard let position = pos.position,
-                          let driver = driverMap[pos.driver_number]?.first else { return nil }
-                    let fullName = "\(driver.first_name) \(driver.last_name)"
-                    return DriverResult(
-                        position: position,
-                        driverName: fullName,
-                        team: driver.team_name ?? "Unknown",
-                        time: "",
-                        points: pointsForPosition(position),
-                        fastestLap: false,
-                        dnf: false
-                    )
+            // Calculate total race time and fastest lap per driver
+            let leaderLapCount = lapsByDriver.values.map { $0.map(\.lap_number).max() ?? 0 }.max() ?? 0
+            let dnfThreshold = max(1, leaderLapCount - 5)
+
+            var driverTotalTimes: [Int: Double] = [:]
+            var driverFastestLaps: [Int: Double] = [:]
+
+            for (driverNum, driverLaps) in lapsByDriver {
+                let validLaps = driverLaps.filter { $0.lap_duration != nil }
+                let totalTime = validLaps.compactMap(\.lap_duration).reduce(0, +)
+                if totalTime > 0 { driverTotalTimes[driverNum] = totalTime }
+
+                if let fastest = validLaps.compactMap(\.lap_duration).min() {
+                    driverFastestLaps[driverNum] = fastest
                 }
+            }
+
+            // Overall fastest lap
+            let overallFastestDriver = driverFastestLaps.min(by: { $0.value < $1.value })?.key
+
+            // P1 total time for delta calculation
+            let p1Driver = finalPositions.values.first { $0.position == 1 }
+            let p1TotalTime = p1Driver.flatMap { driverTotalTimes[$0.driver_number] }
+
+            // Build results, separating finishers and DNFs
+            var finishers: [(pos: OpenF1Position, driver: OpenF1Driver)] = []
+            var dnfDrivers: [(pos: OpenF1Position, driver: OpenF1Driver)] = []
+
+            for pos in finalPositions.values {
+                guard pos.position != nil,
+                      let driver = driverMap[pos.driver_number]?.first else { continue }
+                let maxLap = lapsByDriver[pos.driver_number]?.map(\.lap_number).max() ?? 0
+                if maxLap < dnfThreshold {
+                    dnfDrivers.append((pos, driver))
+                } else {
+                    finishers.append((pos, driver))
+                }
+            }
+
+            finishers.sort { ($0.pos.position ?? 99) < ($1.pos.position ?? 99) }
+            dnfDrivers.sort { (lapsByDriver[$0.pos.driver_number]?.map(\.lap_number).max() ?? 0) >
+                              (lapsByDriver[$1.pos.driver_number]?.map(\.lap_number).max() ?? 0) }
+
+            var results: [DriverResult] = []
+
+            for item in finishers {
+                let position = item.pos.position!
+                let fullName = "\(item.driver.first_name) \(item.driver.last_name)"
+
+                let time: String
+                if position == 1, let total = driverTotalTimes[item.pos.driver_number] {
+                    time = formatTotalTime(total)
+                } else if let p1Time = p1TotalTime, let driverTime = driverTotalTimes[item.pos.driver_number] {
+                    let gap = driverTime - p1Time
+                    time = gap > 0 ? "+\(formatGap(gap))" : ""
+                } else {
+                    time = ""
+                }
+
+                results.append(DriverResult(
+                    position: position,
+                    driverName: fullName,
+                    team: Self.fullTeamNames[item.driver.team_name ?? ""] ?? item.driver.team_name ?? "Unknown",
+                    time: time,
+                    points: pointsForPosition(position),
+                    fastestLap: item.pos.driver_number == overallFastestDriver,
+                    dnf: false
+                ))
+            }
+
+            for (i, item) in dnfDrivers.enumerated() {
+                let fullName = "\(item.driver.first_name) \(item.driver.last_name)"
+                results.append(DriverResult(
+                    position: finishers.count + i + 1,
+                    driverName: fullName,
+                    team: Self.fullTeamNames[item.driver.team_name ?? ""] ?? item.driver.team_name ?? "Unknown",
+                    time: "DNF",
+                    points: 0,
+                    fastestLap: false,
+                    dnf: true
+                ))
+            }
 
             cacheResults(results, cacheKey: cacheKey, timestampKey: timestampKey)
             return results
@@ -337,6 +448,26 @@ final class F1APIService {
             print("[F1API] Results error: \(error)")
             return []
         }
+    }
+
+    private func formatTotalTime(_ seconds: Double) -> String {
+        let hrs = Int(seconds) / 3600
+        let mins = (Int(seconds) % 3600) / 60
+        let secs = Int(seconds) % 60
+        let ms = Int((seconds.truncatingRemainder(dividingBy: 1)) * 1000)
+        if hrs > 0 {
+            return String(format: "%d:%02d:%02d.%03d", hrs, mins, secs, ms)
+        }
+        return String(format: "%d:%02d.%03d", mins, secs, ms)
+    }
+
+    private func formatGap(_ seconds: Double) -> String {
+        if seconds >= 60 {
+            let mins = Int(seconds) / 60
+            let secs = seconds - Double(mins * 60)
+            return String(format: "%dm %05.3fs", mins, secs)
+        }
+        return String(format: "%.3fs", seconds)
     }
 
     private func pointsForPosition(_ position: Int) -> Int {

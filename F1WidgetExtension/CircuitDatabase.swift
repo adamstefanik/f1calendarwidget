@@ -3,6 +3,8 @@ import Foundation
 struct CircuitDatabase {
     static let circuits: [CircuitInfo] = [
         CircuitInfo(circuitId: "AUS", length: "5.278 km", turns: 14, lapRecord: "1:20.235", lapRecordHolder: "Charles Leclerc",      lapRecordYear: 2024, latitude: -37.8497, longitude: 144.9680),
+        CircuitInfo(circuitId: "BHR", length: "5.412 km", turns: 15, lapRecord: "1:31.447", lapRecordHolder: "Pedro de la Rosa",     lapRecordYear: 2005, latitude:  26.0325, longitude:  50.5106),
+        CircuitInfo(circuitId: "SAU", length: "6.174 km", turns: 27, lapRecord: "1:30.734", lapRecordHolder: "Lewis Hamilton",       lapRecordYear: 2021, latitude:  21.6319, longitude:  39.1044),
         CircuitInfo(circuitId: "CHN", length: "5.451 km", turns: 16, lapRecord: "1:32.238", lapRecordHolder: "Michael Schumacher",   lapRecordYear: 2004, latitude:  31.3389, longitude: 121.2198),
         CircuitInfo(circuitId: "JPN", length: "5.807 km", turns: 18, lapRecord: "1:30.983", lapRecordHolder: "Lewis Hamilton",       lapRecordYear: 2019, latitude:  34.8431, longitude: 136.5407),
         CircuitInfo(circuitId: "MIA", length: "5.412 km", turns: 19, lapRecord: "1:29.708", lapRecordHolder: "Max Verstappen",       lapRecordYear: 2023, latitude:  25.9581, longitude: -80.2389),

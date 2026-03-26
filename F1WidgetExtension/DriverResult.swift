@@ -1,7 +1,7 @@
 import Foundation
 
 struct DriverResult: Codable, Identifiable {
-    var id: Int { position }
+    var id: String { "\(position)_\(driverName)" }
     let position: Int
     let driverName: String
     let team: String

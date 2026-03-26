@@ -7,14 +7,16 @@ struct Session: Codable {
     let isHighlighted: Bool
     let startDate: Date?
     let endDate: Date?
+    let sessionKey: Int?
 
-    init(name: String, day: String, time: String, isHighlighted: Bool, startDate: Date? = nil, endDate: Date? = nil) {
+    init(name: String, day: String, time: String, isHighlighted: Bool, startDate: Date? = nil, endDate: Date? = nil, sessionKey: Int? = nil) {
         self.name = name
         self.day = day
         self.time = time
         self.isHighlighted = isHighlighted
         self.startDate = startDate
         self.endDate = endDate
+        self.sessionKey = sessionKey
     }
 
     var isLive: Bool {
@@ -37,12 +39,13 @@ struct Race: Identifiable, Codable {
     let qualifyingDate: Date
     let weekendStart: Date
     let sprint: Bool
+    let isCanceled: Bool
     let apiSessions: [Session]?
 
     init(id: Int, round: Int, name: String, shortName: String, city: String,
          circuit: String, country: String, countryFlag: String,
          raceDate: Date, qualifyingDate: Date, weekendStart: Date,
-         sprint: Bool, apiSessions: [Session]? = nil) {
+         sprint: Bool, isCanceled: Bool = false, apiSessions: [Session]? = nil) {
         self.id = id
         self.round = round
         self.name = name
@@ -55,10 +58,11 @@ struct Race: Identifiable, Codable {
         self.qualifyingDate = qualifyingDate
         self.weekendStart = weekendStart
         self.sprint = sprint
+        self.isCanceled = isCanceled
         self.apiSessions = apiSessions
     }
 
-    var isCompleted: Bool { raceDate < Date() }
+    var isCompleted: Bool { isCanceled || raceDate < Date() }
 
     var daysUntilRace: Int {
         max(0, Calendar.current.dateComponents([.day],
