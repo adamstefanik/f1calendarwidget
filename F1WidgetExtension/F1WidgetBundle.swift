@@ -28,9 +28,15 @@ struct F1WidgetProvider: TimelineProvider {
             if let first = nextRace.sessions.first {
                 print("[F1Widget] First session: \(first.name) \(first.day) \(first.time)")
             }
-            let entry = F1WidgetEntry(date: Date(), nextRace: nextRace)
-            let refresh = Date().addingTimeInterval(3600)
-            completion(Timeline(entries: [entry], policy: .after(refresh)))
+            // Generate entries every minute for the next 2 hours
+            var entries: [F1WidgetEntry] = []
+            let now = Date()
+            for i in 0..<120 {
+                let entryDate = now.addingTimeInterval(Double(i) * 60)
+                entries.append(F1WidgetEntry(date: entryDate, nextRace: nextRace))
+            }
+            let refresh = now.addingTimeInterval(2 * 3600)
+            completion(Timeline(entries: entries, policy: .after(refresh)))
         }
     }
 }

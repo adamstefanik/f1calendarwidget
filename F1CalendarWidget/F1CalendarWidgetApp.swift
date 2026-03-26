@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import WidgetKit
 
 @main
 struct F1CalendarWidgetApp: App {
@@ -15,10 +16,13 @@ struct F1CalendarWidgetApp: App {
                 .task {
                     await raceStore.loadRaces()
                     await scheduleNotificationsIfAllowed()
+                    WidgetCenter.shared.reloadAllTimelines()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                     Task {
+                        await raceStore.loadRaces()
                         await scheduleNotificationsIfAllowed()
+                        WidgetCenter.shared.reloadAllTimelines()
                     }
                 }
         }
