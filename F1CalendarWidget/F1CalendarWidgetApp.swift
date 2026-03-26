@@ -14,6 +14,12 @@ struct F1CalendarWidgetApp: App {
                 }
                 .task {
                     await raceStore.loadRaces()
+                    await scheduleNotificationsIfAllowed()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                    Task {
+                        await scheduleNotificationsIfAllowed()
+                    }
                 }
         }
     }
@@ -21,6 +27,16 @@ struct F1CalendarWidgetApp: App {
     private func handleDeepLink(_ url: URL) {
         guard url.scheme == "f1calendar" else { return }
         selectedTab = 0
+    }
+
+    private func scheduleNotificationsIfAllowed() async {
+        let granted = await NotificationManager.shared.requestPermission()
+        if granted {
+            NotificationManager.shared.scheduleNotifications(
+                for: raceStore.races,
+                settings: SettingsManager.shared
+            )
+        }
     }
 }
 

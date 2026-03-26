@@ -40,7 +40,7 @@ struct ContentView: View {
                 }
                 .tag(1)
 
-            SettingsView()
+            SettingsView(raceStore: raceStore)
                 .tabItem {
                     Image(systemName: "gearshape")
                     Text("Settings")

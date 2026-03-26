@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @StateObject private var settings = SettingsManager.shared
+    @ObservedObject var raceStore: RaceStore
 
     var body: some View {
         NavigationStack {
@@ -94,7 +95,7 @@ struct SettingsView: View {
 
     private func rescheduleNotifications() {
         NotificationManager.shared.scheduleNotifications(
-            for: F1Calendar.races,
+            for: raceStore.races,
             settings: settings
         )
     }
@@ -103,6 +104,6 @@ struct SettingsView: View {
 // MARK: - Preview
 
 #Preview {
-    SettingsView()
+    SettingsView(raceStore: RaceStore())
         .preferredColorScheme(.dark)
 }
