@@ -112,7 +112,7 @@ struct RaceDetailView: View {
                         Rectangle()
                             .fill(Color.f1Divider)
                             .frame(height: 1)
-                            .padding(.top, 4)
+                            .padding(.top, 10)
                             .padding(.leading, 34)
                             .padding(.trailing, 34)
                     }
