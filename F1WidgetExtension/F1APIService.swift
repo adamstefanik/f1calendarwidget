@@ -324,8 +324,8 @@ final class F1APIService {
 
     // MARK: - Race Results
 
-    private let resultsCacheKey = "F1CachedResults_v17"
-    private let resultsCacheTimestampKey = "F1ResultsCacheTimestamp_v17"
+    private let resultsCacheKey = "F1CachedResults_v18"
+    private let resultsCacheTimestampKey = "F1ResultsCacheTimestamp_v18"
 
     enum SessionType {
         case race, sprint, timing, sprintTiming, practice
@@ -491,8 +491,8 @@ final class F1APIService {
                 time: time,
                 gap: gap,
                 points: 0,
-                fastestLap: false,
-                fastestLapTime: "",
+                fastestLap: position == 1,
+                fastestLapTime: position == 1 ? formatLapTime(item.value) : "",
                 segment: segment,
                 dnf: false,
                 laps: lapCount,
