@@ -65,6 +65,16 @@ struct Race: Identifiable, Codable {
 
     var isCompleted: Bool { isCanceled || raceDate < Date() }
 
+    /// Changes when sessionKeys become available (triggers task re-fire)
+    var sessionKeyHash: Int {
+        var hasher = Hasher()
+        hasher.combine(id)
+        for session in sessions {
+            hasher.combine(session.sessionKey)
+        }
+        return hasher.finalize()
+    }
+
     var daysUntilRace: Int {
         max(0, Calendar.current.dateComponents([.day],
             from: Calendar.current.startOfDay(for: Date()),

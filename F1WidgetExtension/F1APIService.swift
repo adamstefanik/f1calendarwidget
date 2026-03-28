@@ -50,6 +50,13 @@ struct OpenF1Lap: Codable {
     let date_start: String?
 }
 
+struct OpenF1Stint: Codable {
+    let driver_number: Int
+    let lap_start: Int
+    let lap_end: Int
+    let compound: String?
+}
+
 
 // MARK: - API Service
 
@@ -58,8 +65,8 @@ final class F1APIService {
     static let shared = F1APIService()
 
     private let baseURL = "https://api.openf1.org/v1"
-    private let cacheKey = "F1CachedRaces_v3"
-    private let cacheTimestampKey = "F1CacheTimestamp_v3"
+    private let cacheKey = "F1CachedRaces_v4"
+    private let cacheTimestampKey = "F1CacheTimestamp_v4"
     private let cacheDuration: TimeInterval = 6 * 3600
 
     private let defaults = UserDefaults(suiteName: "group.com.f1calendar.shared") ?? .standard
@@ -317,8 +324,8 @@ final class F1APIService {
 
     // MARK: - Race Results
 
-    private let resultsCacheKey = "F1CachedResults_v12"
-    private let resultsCacheTimestampKey = "F1ResultsCacheTimestamp_v12"
+    private let resultsCacheKey = "F1CachedResults_v17"
+    private let resultsCacheTimestampKey = "F1ResultsCacheTimestamp_v17"
 
     enum SessionType {
         case race, sprint, timing, sprintTiming, practice
@@ -337,15 +344,12 @@ final class F1APIService {
         // Fetch from OpenF1
         guard let positionsURL = URL(string: "\(baseURL)/position?session_key=\(sessionKey)&position<=20"),
               let driversURL = URL(string: "\(baseURL)/drivers?session_key=\(sessionKey)"),
-              let lapsURL = URL(string: "\(baseURL)/laps?session_key=\(sessionKey)") else {
+              let lapsURL = URL(string: "\(baseURL)/laps?session_key=\(sessionKey)"),
+              let stintsURL = URL(string: "\(baseURL)/stints?session_key=\(sessionKey)") else {
             return []
         }
 
         do {
-            let driverMap: [Int: [OpenF1Driver]]
-            let lapsByDriver: [Int: [OpenF1Lap]]
-            let positions: [OpenF1Position]
-
             async let posData = URLSession.shared.data(from: positionsURL)
             async let drvData = URLSession.shared.data(from: driversURL)
             async let lapData = URLSession.shared.data(from: lapsURL)
@@ -358,25 +362,35 @@ final class F1APIService {
                   let dH = dResp as? HTTPURLResponse, dH.statusCode == 200,
                   let lH = lResp as? HTTPURLResponse, lH.statusCode == 200 else { return [] }
 
-            positions = try JSONDecoder().decode([OpenF1Position].self, from: pData)
+            let positions = try JSONDecoder().decode([OpenF1Position].self, from: pData)
             let drivers = try JSONDecoder().decode([OpenF1Driver].self, from: dData)
             let laps = try JSONDecoder().decode([OpenF1Lap].self, from: lData)
-            driverMap = Dictionary(grouping: drivers, by: \.driver_number)
-            lapsByDriver = Dictionary(grouping: laps, by: \.driver_number)
+            let driverMap = Dictionary(grouping: drivers, by: \.driver_number)
+            let lapsByDriver = Dictionary(grouping: laps, by: \.driver_number)
+
+            // Stints — fetch after main data to avoid rate limiting
+            let stintsByDriver: [Int: [OpenF1Stint]]
+            if sessionType == .timing || sessionType == .sprintTiming {
+                stintsByDriver = await fetchStints(url: stintsURL)
+            } else {
+                stintsByDriver = [:]
+            }
 
             let results: [DriverResult]
             switch sessionType {
             case .timing:
-                results = buildTimingResults(positions: positions, drivers: driverMap, lapsByDriver: lapsByDriver, showDeltas: false, segmentPrefix: "Q")
+                results = buildTimingResults(positions: positions, drivers: driverMap, lapsByDriver: lapsByDriver, stintsByDriver: stintsByDriver, showDeltas: false, segmentPrefix: "Q")
             case .sprintTiming:
-                results = buildTimingResults(positions: positions, drivers: driverMap, lapsByDriver: lapsByDriver, showDeltas: false, segmentPrefix: "SQ")
+                results = buildTimingResults(positions: positions, drivers: driverMap, lapsByDriver: lapsByDriver, stintsByDriver: stintsByDriver, showDeltas: false, segmentPrefix: "SQ")
             case .practice:
-                results = buildTimingResults(positions: positions, drivers: driverMap, lapsByDriver: lapsByDriver, showDeltas: true, segmentPrefix: nil)
+                results = buildTimingResults(positions: positions, drivers: driverMap, lapsByDriver: lapsByDriver, stintsByDriver: [:], showDeltas: true, segmentPrefix: nil)
             case .race, .sprint:
                 results = buildRaceResults(positions: positions, drivers: driverMap, lapsByDriver: lapsByDriver, isSprint: sessionType == .sprint)
             }
 
-            cacheResults(results, cacheKey: cacheKey, timestampKey: timestampKey)
+            if !results.isEmpty {
+                cacheResults(results, cacheKey: cacheKey, timestampKey: timestampKey)
+            }
             return results
         } catch {
             print("[F1API] Results error: \(error)")
@@ -384,15 +398,41 @@ final class F1APIService {
         }
     }
 
+    private func fetchStints(url: URL) async -> [Int: [OpenF1Stint]] {
+        for attempt in 1...2 {
+            do {
+                let (data, resp) = try await URLSession.shared.data(from: url)
+                if let http = resp as? HTTPURLResponse {
+                    if http.statusCode == 200 {
+                        let stints = try JSONDecoder().decode([OpenF1Stint].self, from: data)
+                        print("[F1API] Stints loaded: \(stints.count) for session")
+                        return Dictionary(grouping: stints, by: \.driver_number)
+                    } else if http.statusCode == 429 && attempt == 1 {
+                        print("[F1API] Stints rate limited, retrying...")
+                        try await Task.sleep(nanoseconds: 2_000_000_000)
+                        continue
+                    }
+                }
+                return [:]
+            } catch {
+                print("[F1API] Stints fetch error: \(error)")
+                return [:]
+            }
+        }
+        return [:]
+    }
+
     // MARK: - Timing Results (Practice, Qualifying, Sprint Quali)
 
-    private func buildTimingResults(positions: [OpenF1Position], drivers: [Int: [OpenF1Driver]], lapsByDriver: [Int: [OpenF1Lap]], showDeltas: Bool = false, segmentPrefix: String? = nil) -> [DriverResult] {
-        // Get fastest lap per driver
+    private func buildTimingResults(positions: [OpenF1Position], drivers: [Int: [OpenF1Driver]], lapsByDriver: [Int: [OpenF1Lap]], stintsByDriver: [Int: [OpenF1Stint]], showDeltas: Bool = false, segmentPrefix: String? = nil) -> [DriverResult] {
+        // Get fastest lap per driver (lap number + duration)
         var driverFastestLaps: [Int: Double] = [:]
+        var driverFastestLapNumbers: [Int: Int] = [:]
         for (driverNum, driverLaps) in lapsByDriver {
             let validLaps = driverLaps.filter { $0.lap_duration != nil && !$0.is_pit_out_lap }
-            if let fastest = validLaps.compactMap(\.lap_duration).min() {
-                driverFastestLaps[driverNum] = fastest
+            if let fastestLap = validLaps.min(by: { $0.lap_duration! < $1.lap_duration! }) {
+                driverFastestLaps[driverNum] = fastestLap.lap_duration!
+                driverFastestLapNumbers[driverNum] = fastestLap.lap_number
             }
         }
 
@@ -407,11 +447,12 @@ final class F1APIService {
             let fullName = "\(driver.first_name) \(driver.last_name)"
             let position = index + 1
 
-            let time: String
-            if showDeltas && position > 1, let p1 = p1Time {
-                time = "+\(formatGap(item.value - p1))"
+            let time = formatLapTime(item.value)
+            let gap: String
+            if position > 1, let p1 = p1Time {
+                gap = "+\(formatGap(item.value - p1))"
             } else {
-                time = formatLapTime(item.value)
+                gap = ""
             }
 
             let segment: String
@@ -427,17 +468,35 @@ final class F1APIService {
 
             let lapCount = lapsByDriver[item.key]?.map(\.lap_number).max() ?? 0
 
+            // Find compound used on fastest lap
+            let compound: String
+            if let fastestLapNum = driverFastestLapNumbers[item.key],
+               let stints = stintsByDriver[item.key] {
+                let stint = stints.first { $0.lap_start <= fastestLapNum && $0.lap_end >= fastestLapNum }
+                compound = stint?.compound ?? ""
+                if position <= 3 {
+                    print("[F1API] P\(position) \(fullName): fastest lap \(fastestLapNum), stints=\(stints.count), compound=\(compound)")
+                }
+            } else {
+                compound = ""
+                if position <= 3 {
+                    print("[F1API] P\(position) \(fullName): no stints data (stintsByDriver has \(stintsByDriver.count) drivers)")
+                }
+            }
+
             results.append(DriverResult(
                 position: position,
                 driverName: fullName,
                 team: Self.fullTeamNames[driver.team_name ?? ""] ?? driver.team_name ?? "Unknown",
                 time: time,
+                gap: gap,
                 points: 0,
                 fastestLap: false,
                 fastestLapTime: "",
                 segment: segment,
                 dnf: false,
-                laps: lapCount
+                laps: lapCount,
+                compound: compound
             ))
         }
 
@@ -454,12 +513,14 @@ final class F1APIService {
                 driverName: fullName,
                 team: Self.fullTeamNames[driver.team_name ?? ""] ?? driver.team_name ?? "Unknown",
                 time: "NO TIME",
+                gap: "",
                 points: 0,
                 fastestLap: false,
                 fastestLapTime: "",
                 segment: "",
                 dnf: false,
-                laps: 0
+                laps: 0,
+                compound: ""
             ))
         }
 
@@ -546,12 +607,14 @@ final class F1APIService {
                 driverName: fullName,
                 team: Self.fullTeamNames[item.driver.team_name ?? ""] ?? item.driver.team_name ?? "Unknown",
                 time: time,
+                gap: "",
                 points: pointsForPosition(position, isSprint: isSprint),
                 fastestLap: isFastestLap,
                 fastestLapTime: fastestLapTime,
                 segment: "",
                 dnf: false,
-                laps: 0
+                laps: 0,
+                compound: ""
             ))
         }
 
@@ -562,12 +625,14 @@ final class F1APIService {
                 driverName: fullName,
                 team: Self.fullTeamNames[item.driver.team_name ?? ""] ?? item.driver.team_name ?? "Unknown",
                 time: "DNF",
+                gap: "",
                 points: 0,
                 fastestLap: false,
                 fastestLapTime: "",
                 segment: "",
                 dnf: true,
-                laps: 0
+                laps: 0,
+                compound: ""
             ))
         }
 

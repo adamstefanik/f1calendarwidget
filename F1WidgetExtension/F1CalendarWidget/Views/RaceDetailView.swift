@@ -177,7 +177,7 @@ struct RaceDetailView: View {
                 await loadWeather()
                 await loadResults()
             }
-            .task(id: race.id) {
+            .task(id: race.sessionKeyHash) {
                 weatherState = .loading
                 raceResults = []
                 await loadWeather()
