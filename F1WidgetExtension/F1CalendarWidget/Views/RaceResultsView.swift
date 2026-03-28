@@ -9,9 +9,7 @@ struct RaceResultsView: View {
         displayType == .race || displayType == .sprint
     }
 
-    private var showFastestLap: Bool {
-        displayType == .race || displayType == .sprint
-    }
+    private var showFastestLap: Bool { true }
 
     private var podium: [DriverResult] {
         results.filter { !$0.dnf && $0.position <= 3 }.sorted { $0.position < $1.position }
