@@ -137,10 +137,6 @@ struct F1MediumView: View {
                 DynamicTrackView(raceShortName: race.shortName)
                     .frame(width: 60, height: 60)
                     .padding(2)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.f1Border, lineWidth: 1)
-                    )
                     .padding(.top, 7)
                 
                 VStack(alignment: .leading, spacing: 3) {
