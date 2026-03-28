@@ -47,7 +47,9 @@ struct OpenF1Lap: Codable {
     let lap_number: Int
     let lap_duration: Double?
     let is_pit_out_lap: Bool
+    let date_start: String?
 }
+
 
 // MARK: - API Service
 
@@ -315,11 +317,11 @@ final class F1APIService {
 
     // MARK: - Race Results
 
-    private let resultsCacheKey = "F1CachedResults_v4"
-    private let resultsCacheTimestampKey = "F1ResultsCacheTimestamp_v4"
+    private let resultsCacheKey = "F1CachedResults_v12"
+    private let resultsCacheTimestampKey = "F1ResultsCacheTimestamp_v12"
 
     enum SessionType {
-        case race, sprint, timing
+        case race, sprint, timing, sprintTiming, practice
     }
 
     func fetchResults(for sessionKey: Int, sessionType: SessionType = .race) async -> [DriverResult] {
@@ -340,6 +342,10 @@ final class F1APIService {
         }
 
         do {
+            let driverMap: [Int: [OpenF1Driver]]
+            let lapsByDriver: [Int: [OpenF1Lap]]
+            let positions: [OpenF1Position]
+
             async let posData = URLSession.shared.data(from: positionsURL)
             async let drvData = URLSession.shared.data(from: driversURL)
             async let lapData = URLSession.shared.data(from: lapsURL)
@@ -352,17 +358,20 @@ final class F1APIService {
                   let dH = dResp as? HTTPURLResponse, dH.statusCode == 200,
                   let lH = lResp as? HTTPURLResponse, lH.statusCode == 200 else { return [] }
 
-            let positions = try JSONDecoder().decode([OpenF1Position].self, from: pData)
+            positions = try JSONDecoder().decode([OpenF1Position].self, from: pData)
             let drivers = try JSONDecoder().decode([OpenF1Driver].self, from: dData)
             let laps = try JSONDecoder().decode([OpenF1Lap].self, from: lData)
-
-            let driverMap = Dictionary(grouping: drivers, by: \.driver_number)
-            let lapsByDriver = Dictionary(grouping: laps, by: \.driver_number)
+            driverMap = Dictionary(grouping: drivers, by: \.driver_number)
+            lapsByDriver = Dictionary(grouping: laps, by: \.driver_number)
 
             let results: [DriverResult]
             switch sessionType {
             case .timing:
-                results = buildTimingResults(positions: positions, drivers: driverMap, lapsByDriver: lapsByDriver)
+                results = buildTimingResults(positions: positions, drivers: driverMap, lapsByDriver: lapsByDriver, showDeltas: false, segmentPrefix: "Q")
+            case .sprintTiming:
+                results = buildTimingResults(positions: positions, drivers: driverMap, lapsByDriver: lapsByDriver, showDeltas: false, segmentPrefix: "SQ")
+            case .practice:
+                results = buildTimingResults(positions: positions, drivers: driverMap, lapsByDriver: lapsByDriver, showDeltas: true, segmentPrefix: nil)
             case .race, .sprint:
                 results = buildRaceResults(positions: positions, drivers: driverMap, lapsByDriver: lapsByDriver, isSprint: sessionType == .sprint)
             }
@@ -377,7 +386,7 @@ final class F1APIService {
 
     // MARK: - Timing Results (Practice, Qualifying, Sprint Quali)
 
-    private func buildTimingResults(positions: [OpenF1Position], drivers: [Int: [OpenF1Driver]], lapsByDriver: [Int: [OpenF1Lap]]) -> [DriverResult] {
+    private func buildTimingResults(positions: [OpenF1Position], drivers: [Int: [OpenF1Driver]], lapsByDriver: [Int: [OpenF1Lap]], showDeltas: Bool = false, segmentPrefix: String? = nil) -> [DriverResult] {
         // Get fastest lap per driver
         var driverFastestLaps: [Int: Double] = [:]
         for (driverNum, driverLaps) in lapsByDriver {
@@ -399,14 +408,24 @@ final class F1APIService {
             let position = index + 1
 
             let time: String
-            if position == 1 {
-                time = formatLapTime(item.value)
-            } else if let p1 = p1Time {
-                let gap = item.value - p1
-                time = "+\(formatGap(gap))"
+            if showDeltas && position > 1, let p1 = p1Time {
+                time = "+\(formatGap(item.value - p1))"
             } else {
-                time = ""
+                time = formatLapTime(item.value)
             }
+
+            let segment: String
+            if let prefix = segmentPrefix {
+                switch position {
+                case 1...10: segment = "\(prefix)3"
+                case 11...15: segment = "\(prefix)2"
+                default: segment = "\(prefix)1"
+                }
+            } else {
+                segment = ""
+            }
+
+            let lapCount = lapsByDriver[item.key]?.map(\.lap_number).max() ?? 0
 
             results.append(DriverResult(
                 position: position,
@@ -415,7 +434,10 @@ final class F1APIService {
                 time: time,
                 points: 0,
                 fastestLap: false,
-                dnf: false
+                fastestLapTime: "",
+                segment: segment,
+                dnf: false,
+                laps: lapCount
             ))
         }
 
@@ -434,7 +456,10 @@ final class F1APIService {
                 time: "NO TIME",
                 points: 0,
                 fastestLap: false,
-                dnf: false
+                fastestLapTime: "",
+                segment: "",
+                dnf: false,
+                laps: 0
             ))
         }
 
@@ -461,10 +486,16 @@ final class F1APIService {
         var driverFastestLaps: [Int: Double] = [:]
 
         for (driverNum, driverLaps) in lapsByDriver {
-            let validLaps = driverLaps.filter { $0.lap_duration != nil }
-            let totalTime = validLaps.compactMap(\.lap_duration).reduce(0, +)
-            if totalTime > 0 { driverTotalTimes[driverNum] = totalTime }
+            let sortedLaps = driverLaps.sorted { $0.lap_number < $1.lap_number }
+            if let firstDateStr = sortedLaps.first?.date_start,
+               let lastDateStr = sortedLaps.last?.date_start,
+               let firstDate = parseISODate(firstDateStr),
+               let lastDate = parseISODate(lastDateStr) {
+                let dateTotal = lastDate.timeIntervalSince(firstDate)
+                if dateTotal > 0 { driverTotalTimes[driverNum] = dateTotal }
+            }
 
+            let validLaps = driverLaps.filter { $0.lap_duration != nil }
             if let fastest = validLaps.compactMap(\.lap_duration).min() {
                 driverFastestLaps[driverNum] = fastest
             }
@@ -508,14 +539,19 @@ final class F1APIService {
                 time = ""
             }
 
+            let isFastestLap = item.pos.driver_number == overallFastestDriver
+            let fastestLapTime = isFastestLap ? driverFastestLaps[item.pos.driver_number].map { formatLapTime($0) } ?? "" : ""
             results.append(DriverResult(
                 position: position,
                 driverName: fullName,
                 team: Self.fullTeamNames[item.driver.team_name ?? ""] ?? item.driver.team_name ?? "Unknown",
                 time: time,
                 points: pointsForPosition(position, isSprint: isSprint),
-                fastestLap: item.pos.driver_number == overallFastestDriver,
-                dnf: false
+                fastestLap: isFastestLap,
+                fastestLapTime: fastestLapTime,
+                segment: "",
+                dnf: false,
+                laps: 0
             ))
         }
 
@@ -528,7 +564,10 @@ final class F1APIService {
                 time: "DNF",
                 points: 0,
                 fastestLap: false,
-                dnf: true
+                fastestLapTime: "",
+                segment: "",
+                dnf: true,
+                laps: 0
             ))
         }
 
@@ -539,6 +578,13 @@ final class F1APIService {
         let mins = Int(seconds) / 60
         let secs = seconds - Double(mins * 60)
         return String(format: "%d:%06.3f", mins, secs)
+    }
+
+    private func parseISODate(_ str: String) -> Date? {
+        // Handle format: 2026-03-08T04:03:26.365000+00:00
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: str)
     }
 
     private func formatTotalTime(_ seconds: Double) -> String {
