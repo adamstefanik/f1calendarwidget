@@ -3,7 +3,8 @@ import SwiftUI
 enum SessionDisplayType {
     case race       // GP: podium P1-P3, points, fastest lap icon
     case sprint     // Sprint: podium P1-P3, sprint points, fastest lap icon
-    case timing     // Practice, Qualifying, Sprint Quali: flat list, times + deltas, no points, no fastest lap icon
+    case timing     // Qualifying, Sprint Quali: flat list, own times, segment labels, no points
+    case practice   // Practice 1/2/3: flat list, deltas, laps column (future)
 }
 
 struct SessionResultsView: View {
@@ -19,9 +20,36 @@ struct SessionResultsView: View {
         results.filter { $0.dnf }
     }
 
+    private var columnHeader: some View {
+        HStack(spacing: 12) {
+            Text("POS.")
+                .frame(width: 36, alignment: .center)
+            Text("DRIVER")
+            Spacer()
+            if displayType == .practice {
+                Text("LAPS")
+                    .frame(width: 40, alignment: .trailing)
+            }
+            Text("TIME/GAP")
+                .frame(width: displayType == .practice ? 80 : 100, alignment: .trailing)
+        }
+        .font(.system(size: 10, weight: .medium))
+        .foregroundColor(.f1SecondaryText)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
+                columnHeader
+
+                Rectangle()
+                    .fill(Color.f1Divider)
+                    .frame(height: 1)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
+
                 ForEach(finishers) { driver in
                     switch displayType {
                     case .race, .sprint:
@@ -33,11 +61,22 @@ struct SessionResultsView: View {
                             CompactRow(driver: driver, showFastestLap: true)
                         }
                     case .timing:
-                        if driver.position <= 3 {
-                            PodiumRow(driver: driver, showPoints: false, showFastestLap: false, highlightFastestTime: true)
-                        } else {
-                            TimingRow(driver: driver)
+                        Group {
+                            if driver.position == 11 || driver.position == 16 {
+                                Rectangle()
+                                    .fill(Color.f1Divider)
+                                    .frame(height: 1)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 4)
+                            }
+                            if driver.position <= 3 {
+                                PodiumRow(driver: driver, showPoints: false, showFastestLap: false, highlightFastestTime: true)
+                            } else {
+                                TimingRow(driver: driver)
+                            }
                         }
+                    case .practice:
+                        PracticeRow(driver: driver)
                     }
                 }
 
@@ -82,9 +121,49 @@ private struct TimingRow: View {
 
             Spacer()
 
+            HStack(spacing: 0) {
+                let showSegment = !driver.segment.isEmpty && driver.segment != "Q3" && driver.segment != "SQ3"
+                Text(showSegment ? "\(driver.segment):" : "")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.f1SecondaryText)
+                    .frame(width: 36, alignment: .leading)
+                Text(driver.time)
+                    .font(.system(size: 12, weight: driver.position == 1 ? .semibold : .regular))
+                    .foregroundColor(driver.position == 1 ? .purple : .white)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 7)
+    }
+}
+
+// MARK: - Practice Row
+
+private struct PracticeRow: View {
+    let driver: DriverResult
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text("\(driver.position)")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(driver.position == 1 ? .f1Gold : .white)
+                .frame(width: 36, alignment: .center)
+
+            Text(driver.driverName)
+                .font(.system(size: 13, weight: driver.position == 1 ? .semibold : .medium))
+                .foregroundColor(.white)
+
+            Spacer()
+
+            Text(driver.laps > 0 ? "\(driver.laps)" : "–")
+                .font(.system(size: 12))
+                .foregroundColor(.f1SecondaryText)
+                .frame(width: 40, alignment: .trailing)
+
             Text(driver.time)
-                .font(.system(size: 11, weight: driver.position == 1 ? .semibold : .regular))
+                .font(.system(size: 12, weight: driver.position == 1 ? .semibold : .regular))
                 .foregroundColor(driver.position == 1 ? .purple : .white)
+                .frame(width: 80, alignment: .trailing)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 7)
@@ -111,36 +190,48 @@ private struct PodiumRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Text("\(driver.position)")
-                .font(.system(size: 22, weight: .bold))
+                .font(.system(size: 14, weight: .bold))
                 .foregroundColor(positionColor)
                 .frame(width: 36, alignment: .center)
 
             HStack(spacing: 8) {
                 Text(driver.driverName)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.f1Text)
-                if showFastestLap && driver.fastestLap {
-                    Image(systemName: "stopwatch.fill")
-                        .font(.system(size: 10))
-                        .foregroundColor(.purple)
-                }
-            }
 
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(driver.time)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(highlightFastestTime && driver.position == 1 ? .purple : .f1Text)
                 if showPoints && driver.points > 0 {
                     Text("+\(driver.points) pts")
                         .font(.system(size: 10))
                         .foregroundColor(.f1SecondaryText)
                 }
+
+                if showFastestLap && driver.fastestLap {
+                    Image(systemName: "stopwatch.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.purple)
+                    if !driver.fastestLapTime.isEmpty {
+                        Text(driver.fastestLapTime)
+                            .font(.system(size: 10))
+                            .foregroundColor(.purple)
+                    }
+                }
+            }
+
+            Spacer()
+
+            HStack(spacing: 0) {
+                let showSegment = !driver.segment.isEmpty && driver.segment != "Q3" && driver.segment != "SQ3"
+                Text(showSegment ? "\(driver.segment):" : "")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.f1SecondaryText)
+                    .frame(width: 36, alignment: .leading)
+                Text(driver.time)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(highlightFastestTime && driver.position == 1 ? .purple : .f1Text)
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.vertical, 7)
     }
 }
 
@@ -162,25 +253,30 @@ private struct PointsRow: View {
                 Text(driver.driverName)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.f1Text)
-                if showFastestLap && driver.fastestLap {
-                    Image(systemName: "stopwatch.fill")
-                        .font(.system(size: 10))
-                        .foregroundColor(.purple)
-                }
-            }
 
-            Spacer()
-
-            HStack(spacing: 8) {
-                Text(driver.time)
-                    .font(.system(size: 11))
-                    .foregroundColor(.f1Text)
                 if showPoints && driver.points > 0 {
                     Text("+\(driver.points)")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.f1SecondaryText)
                 }
+
+                if showFastestLap && driver.fastestLap {
+                    Image(systemName: "stopwatch.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.purple)
+                    if !driver.fastestLapTime.isEmpty {
+                        Text(driver.fastestLapTime)
+                            .font(.system(size: 10))
+                            .foregroundColor(.purple)
+                    }
+                }
             }
+
+            Spacer()
+
+            Text(driver.time)
+                .font(.system(size: 12))
+                .foregroundColor(.f1Text)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 7)
@@ -208,13 +304,16 @@ private struct CompactRow: View {
                     Image(systemName: "stopwatch.fill")
                         .font(.system(size: 10))
                         .foregroundColor(.purple)
+                    Text(driver.fastestLapTime)
+                        .font(.system(size: 10))
+                        .foregroundColor(.purple)
                 }
             }
 
             Spacer()
 
             Text(driver.time)
-                .font(.system(size: 11))
+                .font(.system(size: 12))
                 .foregroundColor(.f1Text)
         }
         .padding(.horizontal, 16)
@@ -251,9 +350,16 @@ private struct DNFRow: View {
 
 // MARK: - Preview
 
-#Preview {
+#Preview("Grand Prix") {
     NavigationStack {
-        SessionResultsView(title: "Grand Prix Results", results: DriverResult.previewResults)
+        SessionResultsView(title: "GRAND PRIX", results: DriverResult.previewResults)
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Qualifying") {
+    NavigationStack {
+        SessionResultsView(title: "QUALIFYING", results: DriverResult.previewResults, displayType: .timing)
     }
     .preferredColorScheme(.dark)
 }
