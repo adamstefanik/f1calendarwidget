@@ -29,7 +29,7 @@ struct CalendarRowView: View {
 
     private var nextSessionLabel: String {
         guard let session = nextSession else { return "" }
-        return "\(session.name) starts in"
+        return "\(session.name) STARTS IN"
     }
 
     var body: some View {
@@ -55,7 +55,7 @@ struct CalendarRowView: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
-                                .background(RoundedRectangle(cornerRadius: 3).fill(Color.f1Red))
+                                .background(RoundedRectangle(cornerRadius: 3).stroke(Color.f1Text))
                         }
 
                         if race.isCanceled {
