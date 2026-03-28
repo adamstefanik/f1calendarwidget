@@ -20,7 +20,7 @@ struct WeatherSectionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text("WEATHER")
+                Text("TRACK CONDITIONS")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.f1SecondaryText)
 
