@@ -309,14 +309,14 @@ final class F1APIService {
     private static let canceledRaces: Set<String> = ["BRN", "KSA"]
 
     private static let fullTeamNames: [String: String] = [
-        "Alpine": "BWT Alpine F1 Team",
-        "Aston Martin": "Aston Martin Aramco F1 Team",
-        "Audi": "Audi F1 Team",
-        "Cadillac": "Cadillac F1 Team",
+        "Alpine": "BWT Alpine",
+        "Aston Martin": "Aston Martin Aramco",
+        "Audi": "Audi",
+        "Cadillac": "Cadillac",
         "Ferrari": "Scuderia Ferrari",
-        "Haas F1 Team": "MoneyGram Haas F1 Team",
+        "Haas F1 Team": "MoneyGram Haas",
         "McLaren": "McLaren F1 Team",
-        "Mercedes": "Mercedes-AMG Petronas F1 Team",
+        "Mercedes": "Mercedes-AMG Petronas",
         "Racing Bulls": "Visa Cash App Racing Bulls",
         "Red Bull Racing": "Oracle Red Bull Racing",
         "Williams": "Williams Racing",
