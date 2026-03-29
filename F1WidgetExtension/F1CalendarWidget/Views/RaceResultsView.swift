@@ -34,7 +34,6 @@ struct RaceResultsView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.f1SecondaryText)
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 4)
             }
         }
         .padding(.horizontal, 34)
