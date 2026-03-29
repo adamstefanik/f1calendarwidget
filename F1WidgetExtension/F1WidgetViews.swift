@@ -40,10 +40,12 @@ struct F1LargeView: View {
                 
                 // Race info
                 VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6){
+                    HStack(spacing: 8){
                         Text(race.city)
                             .font(.system(size: 15, weight: .bold))
                             .foregroundColor(.f1Text)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
                     }
                     Text("FORMULA 1 \(race.name.uppercased()) 2026")
                         .font(.system(size: 8, weight: .medium))
@@ -57,8 +59,9 @@ struct F1LargeView: View {
                         .lineLimit(1)
                 }
                 .padding(.leading, 7)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                Spacer()
+            //  Spacer()
 
                 // Session badge + countdown
                 VStack(alignment: .trailing, spacing: 6) {
@@ -190,7 +193,7 @@ struct F1MediumView: View {
             Text("github.com/adamstefanik")
                 .font(.system(size: 7, weight: .medium, design: .monospaced))
                 .foregroundColor(.f1SecondaryText.opacity(0.5))
-                .offset(y: -6)
+                .offset(y: -8)
         }
     }
 
@@ -319,7 +322,7 @@ struct DynamicTrackView: View {
 #Preview("Large", as: .systemLarge) {
     F1CalendarWidget()
 } timeline: {
-    F1WidgetEntry(date: .now, nextRace: F1Calendar.nextRace ?? F1Calendar.fallbackRaces[2])
+    F1WidgetEntry(date: .now, nextRace: F1Calendar.nextRace ?? F1Calendar.fallbackRaces[5])
 }
 
 #Preview("Large – Live FP1", as: .systemLarge) {
@@ -331,7 +334,7 @@ struct DynamicTrackView: View {
 #Preview("Medium", as: .systemMedium) {
     F1CalendarWidget()
 } timeline: {
-    F1WidgetEntry(date: .now, nextRace: F1Calendar.nextRace ?? F1Calendar.fallbackRaces[2])
+    F1WidgetEntry(date: .now, nextRace: F1Calendar.nextRace ?? F1Calendar.fallbackRaces[5])
 }
 
 #Preview("Medium – Live FP1", as: .systemMedium) {
