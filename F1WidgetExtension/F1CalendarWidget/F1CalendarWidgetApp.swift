@@ -20,6 +20,7 @@ struct F1CalendarWidgetApp: App {
                     await scheduleNotificationsIfAllowed()
                     WidgetCenter.shared.reloadAllTimelines()
                 }
+                #if os(iOS)
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                     Task {
                         await raceStore.loadRaces()
@@ -27,6 +28,15 @@ struct F1CalendarWidgetApp: App {
                         WidgetCenter.shared.reloadAllTimelines()
                     }
                 }
+                #elseif os(macOS)
+                .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                    Task {
+                        await raceStore.loadRaces()
+                        await scheduleNotificationsIfAllowed()
+                        WidgetCenter.shared.reloadAllTimelines()
+                    }
+                }
+                #endif
         }
     }
 
