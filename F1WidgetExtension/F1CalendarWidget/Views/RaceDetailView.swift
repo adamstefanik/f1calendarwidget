@@ -169,8 +169,10 @@ struct RaceDetailView: View {
                     }
             )
             .refreshable {
+                #if os(iOS)
                 let generator = UIImpactFeedbackGenerator(style: .medium)
                 generator.impactOccurred()
+                #endif
                 await onRefresh?()
                 weatherState = .loading
                 raceResults = []
@@ -208,7 +210,8 @@ struct RaceDetailView: View {
             latitude: info.latitude,
             longitude: info.longitude,
             weekendStart: race.weekendStart,
-            raceDate: race.raceDate
+            raceDate: race.raceDate,
+            sessions: race.sessions
         )
         if !forecasts.isEmpty {
             weatherState = .loaded(forecasts)
@@ -260,4 +263,5 @@ private struct ScreenWidthKey: PreferenceKey {
         value = nextValue()
     }
 }
+
 
